@@ -101,23 +101,32 @@ local function createPlaytimeDebugWindow()
     -- DRAG (устойчивый шаблон)
     --------------------------------------------------
 
-    local dragging = false
-    local dragInput
-    local dragStart
-    local startPos
+local dragging = false
+local dragStart
+local startPos
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    title.BorderSizePixel = 0
-    title.Font = Enum.Font.GothamBold
-    title.Text = "AisbergHub • Playtime Debug"
-    title.TextSize = 14
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = main
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
 
-    local function updateDrag(input)
+title.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         main.Position = UDim2.new(
             startPos.X.Scale,
@@ -126,20 +135,7 @@ local function createPlaytimeDebugWindow()
             startPos.Y.Offset + delta.Y
         )
     end
-
-    title.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = main.Position
-
-            input.Changed:Connect(function(state)
-                if state == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
+end)
 
     title.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
