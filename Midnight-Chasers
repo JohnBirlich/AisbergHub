@@ -1216,10 +1216,12 @@ local function createMainGui()
 
     race1Btn.MouseButton1Click:Connect(function()
         if autofarmRunning or race2Running or race3Running or race4Running then return end
+
         if not race1Running then
             race1Running = true
             race1Btn.Text = "Stop City Highway Race 🏁"
             print("[AisbergHub] Auto City Highway Race started")
+
             task.spawn(function()
                 runRace1Loop()
                 race1Running = false
@@ -1228,13 +1230,8 @@ local function createMainGui()
             end)
         else
             race1Running = false
-            if currentTween then
-                currentTween:Cancel()
-            end
-            if _G.raceGround then
-                _G.raceGround:Destroy()
-                _G.raceGround = nil
-            end
+            if currentTween then currentTween:Cancel() end
+            if _G.raceGround then _G.raceGround:Destroy() _G.raceGround = nil end
             race1Btn.Text = "Auto City Highway Race 🏁"
             print("[AisbergHub] Auto City Highway Race stopped (by button)")
         end
@@ -1242,55 +1239,72 @@ local function createMainGui()
 
     race2Btn.MouseButton1Click:Connect(function()
         if autofarmRunning or race1Running or race3Running or race4Running then return end
+
         if not race2Running then
             race2Running = true
             race2Btn.Text = "Stop Rainbow Bridge Sprint 🏁"
+            print("[AisbergHub] Auto Rainbow Bridge Sprint started")
+
             task.spawn(function()
                 runRace2Route()
+                race2Running = false
                 race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
+                print("[AisbergHub] Auto Rainbow Bridge Sprint stopped")
             end)
         else
             race2Running = false
-            if currentTween then
-                currentTween:Cancel()
-            end
+            if currentTween then currentTween:Cancel() end
+            if _G.raceGround then _G.raceGround:Destroy() _G.raceGround = nil end
+            race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
+            print("[AisbergHub] Auto Rainbow Bridge Sprint stopped (by button)")
         end
     end)
 
     race3Btn.MouseButton1Click:Connect(function()
         if autofarmRunning or race1Running or race2Running or race4Running then return end
+
         if not race3Running then
             race3Running = true
             race3Btn.Text = "Stop Dojo Sprint 🏁"
+            print("[AisbergHub] Auto Dojo Sprint started")
+
             task.spawn(function()
                 runRace3Route()
+                race3Running = false
                 race3Btn.Text = "Auto Dojo Sprint 🏁"
+                print("[AisbergHub] Auto Dojo Sprint stopped")
             end)
         else
             race3Running = false
-            if currentTween then
-                currentTween:Cancel()
-            end
+            if currentTween then currentTween:Cancel() end
+            if _G.raceGround then _G.raceGround:Destroy() _G.raceGround = nil end
+            race3Btn.Text = "Auto Dojo Sprint 🏁"
+            print("[AisbergHub] Auto Dojo Sprint stopped (by button)")
         end
     end)
 
     race4Btn.MouseButton1Click:Connect(function()
         if autofarmRunning or race1Running or race2Running or race3Running then return end
+
         if not race4Running then
             race4Running = true
             race4Btn.Text = "Stop Rainbow Rinkai Dojo Sprint 🏁"
+            print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint started")
+
             task.spawn(function()
                 runRace4Route()
+                race4Running = false
                 race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
+                print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint stopped")
             end)
         else
             race4Running = false
-            if currentTween then
-                currentTween:Cancel()
-            end
+            if currentTween then currentTween:Cancel() end
+            if _G.raceGround then _G.raceGround:Destroy() _G.raceGround = nil end
+            race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
+            print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint stopped (by button)")
         end
     end)
-
     --------------------------------------------------
     -- Тоггл GUI на G
     --------------------------------------------------
