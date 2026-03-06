@@ -13,19 +13,19 @@ local LocalPlayer = Players.LocalPlayer
 print("AisbergHub LocalScript loaded")
 
 --------------------------------------------------
--- Безопасная загрузка TeleportModule
+-- Загрузка TeleportVehicle (Shared)
 --------------------------------------------------
 
 local TeleportModule
 do
     local ok, result = pcall(function()
         local modulesRoot = ReplicatedStorage:WaitForChild("Modules")
-        local subModules  = modulesRoot:WaitForChild("Modules")
-        return require(subModules:WaitForChild("Teleport"))
+        local shared      = modulesRoot:WaitForChild("Shared")
+        return require(shared:WaitForChild("TeleportVehicle"))
     end)
     if ok then
         TeleportModule = result
-        print("[AisbergHub] TeleportModule loaded")
+        print("[AisbergHub] TeleportModule (TeleportVehicle) loaded")
     else
         warn("[AisbergHub] Failed to load TeleportModule:", result)
     end
@@ -245,10 +245,6 @@ local function createMainGui()
 
     local function hideWorkspaceObjects(plr)
         local ok, err = pcall(function()
-            if not ReplicatedStorage:FindChild("mrbackupfolder") and not ReplicatedStorage:FindFirstChild("mrbackupfolder") then
-                -- защита от странных случаев, но основной вариант ниже
-            end
-
             if not ReplicatedStorage:FindFirstChild("mrbackupfolder") then
                 local folder = Instance.new("Folder")
                 folder.Name = "mrbackupfolder"
@@ -493,7 +489,7 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Телепорт машины к старту Race1 через модуль
+    -- Телепорт машины к старту Race1 через TeleportVehicle
     --------------------------------------------------
 
     local function teleportCarToRace1Start()
