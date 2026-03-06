@@ -4,10 +4,8 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
--- Настройки
+-- Материалы и цвет
 --------------------------------------------------
-
-local CAR_NAME = "bonitoscocos's Car"
 
 local MATERIAL_NAMES = {
     "Asphalt","Basalt","Brick","Cardboard","Carpet","CeramicTiles","ClayRoofTiles",
@@ -47,20 +45,47 @@ local function getSelectedColor()
 end
 
 --------------------------------------------------
+-- Поиск машины игрока
+--------------------------------------------------
+
+local function getPlayerCarModel()
+    local char = LocalPlayer.Character
+    if not char then
+        warn("[CarMaterial] No character")
+        return nil
+    end
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum or not hum.SeatPart then
+        warn("[CarMaterial] Player is not in a seat/vehicle")
+        return nil
+    end
+
+    local seat = hum.SeatPart
+    -- поднимаемся вверх до Model, которую считаем машиной
+    local car = seat:FindFirstAncestorOfClass("Model")
+    if not car then
+        warn("[CarMaterial] Vehicle model not found from seat")
+        return nil
+    end
+
+    return car
+end
+
+--------------------------------------------------
 -- Применить к машине
 --------------------------------------------------
 
 local function applyMaterialToCar()
     local ok, err = pcall(function()
-        local car = Workspace:FindFirstChild(CAR_NAME)
-        if not car or not car:IsA("Model") then
-            warn("[CarMaterial] Model '" .. CAR_NAME .. "' not found in Workspace")
+        local car = getPlayerCarModel()
+        if not car then
             return
         end
 
         local mat   = getSelectedMaterial()
         local color = getSelectedColor()
-        print("[CarMaterial] Applying", mat.Name, "RGB", color, "to", CAR_NAME)
+        print("[CarMaterial] Applying", mat.Name, "to", car:GetFullName(), "color", color)
 
         for _, desc in ipairs(car:GetDescendants()) do
             if desc:IsA("Part") or desc:IsA("MeshPart") then
@@ -69,7 +94,7 @@ local function applyMaterialToCar()
             end
         end
 
-        print("[CarMaterial] Done for '" .. CAR_NAME .. "'")
+        print("[CarMaterial] Done for car:", car.Name)
     end)
 
     if not ok then
@@ -101,7 +126,7 @@ local function createCarMaterialGui()
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BorderSizePixel = 0
     title.Font = Enum.Font.GothamBold
-    title.Text = "Car Material • " .. CAR_NAME
+    title.Text = "Car Material (your car)"
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -204,7 +229,7 @@ local function createCarMaterialGui()
 
     local selectedHighlight
 
-    local function createMatButton(index, name)
+    local function createMatButton(name)
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -4, 0, 20)
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -230,8 +255,8 @@ local function createCarMaterialGui()
         end
     end
 
-    for i, name in ipairs(MATERIAL_NAMES) do
-        createMatButton(i, name)
+    for _, name in ipairs(MATERIAL_NAMES) do
+        createMatButton(name)
     end
 
     --------------------------------------------------
