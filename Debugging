@@ -292,8 +292,8 @@ local function createPlaytimeDebugWindow()
     topScroll.BorderSizePixel = 0
     topScroll.ScrollBarThickness = 6
     topScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-    topScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
-    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y -- авто‑канва по высоте[web:604][web:608]
+    topScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     topScroll.ScrollingEnabled = true
     topScroll.ClipsDescendants = true
     topScroll.Parent = topContainer
@@ -311,22 +311,6 @@ local function createPlaytimeDebugWindow()
     logLabel.TextSize = 14
     logLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
     logLabel.Parent = topScroll
-
-    local function updateTopCanvas()
-        local contentHeight = logLabel.AbsoluteSize.Y
-        local frameHeight = topScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 10, frameHeight)
-        topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
-    end
-
-    logLabel:GetPropertyChangedSignal("Text"):Connect(function()
-        updateTopCanvas()
-        -- без автоскролла, позицию задаёшь сам
-    end)
-
-    topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateTopCanvas()
-    end)
 
     local function appendLine(text)
         if logLabel.Text == "" then
@@ -376,8 +360,8 @@ local function createPlaytimeDebugWindow()
     bottomScroll.BorderSizePixel = 0
     bottomScroll.ScrollBarThickness = 6
     bottomScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-    bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
-    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y -- авто‑канва[web:604][web:610]
+    bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     bottomScroll.ScrollingEnabled = true
     bottomScroll.ClipsDescendants = true
     bottomScroll.Parent = bottomContainer
@@ -398,21 +382,6 @@ local function createPlaytimeDebugWindow()
     copyBox.TextColor3 = Color3.fromRGB(200, 255, 200)
     copyBox.Text = ""
     copyBox.Parent = bottomScroll
-
-    local function updateBottomCanvas()
-        local contentHeight = copyBox.AbsoluteSize.Y
-        local frameHeight = bottomScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 10, frameHeight)
-        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
-    end
-
-    copyBox:GetPropertyChangedSignal("Text"):Connect(function()
-        updateBottomCanvas()
-    end)
-
-    bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateBottomCanvas()
-    end)
 
     copyBtn.MouseButton1Click:Connect(function()
         copyBox.Text = logLabel.Text
@@ -499,7 +468,7 @@ local function createPlaytimeDebugWindow()
         local ok, err = pcall(function()
             -- Workspace > Chekings > Checkpoints > 1..70 / Finish
             local chekings = Workspace:WaitForChild("Chekings")
-            local checkpointsFolder = chekings:WaitForChild("Checkpoints") -- тут лежат 1..70 и Finish[web:586][web:601]
+            local checkpointsFolder = chekings:WaitForChild("Checkpoints") -- папка/контейнер с партами[web:586][web:601]
 
             for i = 1, 70 do
                 local name = tostring(i)
