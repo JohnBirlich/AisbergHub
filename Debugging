@@ -464,7 +464,7 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Логика: DownforceF касается чекпоинтов Race2
+    -- Логика: DownforceF касается внутренних Part чекпоинтов Race2
     --------------------------------------------------
 
     local running = false
@@ -484,7 +484,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- x,y,z, R00..R22[web:574][web:580]
+        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:574][web:580]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -516,13 +516,28 @@ local function createPlaytimeDebugWindow()
         disconnectAll()
 
         local ok, err = pcall(function()
-            -- Workspace > Races > Race2 > Races > Race2_unique code (+Checkpoint IntValue и Parts)
+            -- Workspace > Races > Race2 > Races > Race2_unique code > Checkpoint(IntValue)
+            -- и внутри этого экземпляра дети "1".."70"/"Finish", а ВНУТРИ них реальный Part[web:585][web:587]
             local races = Workspace:WaitForChild("Races")
             local race2Root = races:WaitForChild("Race2")
             local race2Races = race2Root:WaitForChild("Races")
 
             local checkpointsByPart = {}
             local checkpointsReady = false
+
+            local function scanCheckpointContainer(container, labelIndex)
+                for _, desc in ipairs(container:GetDescendants()) do
+                    if desc:IsA("BasePart") then
+                        checkpointsByPart[desc] = labelIndex
+                        appendLine(string.format(
+                            "[BindInner] %s (index=%s) from %s",
+                            desc:GetFullName(),
+                            tostring(labelIndex),
+                            container.Name
+                        ))
+                    end
+                end
+            end
 
             local function scanRaceInstance(instance)
                 if not instance:IsA("Folder") and not instance:IsA("Model") then return end
@@ -536,19 +551,11 @@ local function createPlaytimeDebugWindow()
                 end
 
                 for _, child in ipairs(instance:GetChildren()) do
-                    if child:IsA("BasePart") then
-                        local idx = tonumber(child.Name)
-                        local isFinish = (child.Name == "Finish")
-                        if (idx and idx >= 1 and idx <= 70) or isFinish then
-                            local labelIndex = isFinish and 999 or idx
-                            checkpointsByPart[child] = labelIndex
-                            appendLine(string.format(
-                                "[Bind] %s (index=%s) from %s",
-                                child.Name,
-                                tostring(labelIndex),
-                                instance.Name
-                            ))
-                        end
+                    local idx = tonumber(child.Name)
+                    local isFinish = (child.Name == "Finish")
+                    if (idx and idx >= 1 and idx <= 70) or isFinish then
+                        local labelIndex = isFinish and 999 or idx
+                        scanCheckpointContainer(child, labelIndex)
                     end
                 end
             end
@@ -571,12 +578,12 @@ local function createPlaytimeDebugWindow()
 
             appendLine("[Info] Using DownforceF: " .. downforce:GetFullName())
 
-            downforce.CanTouch = true -- чтобы Touched / GetTouchingParts работали стабильно[web:564]
+            downforce.CanTouch = true -- для стабильной работы Touched/GetTouchingParts[web:564]
 
             local function onDownforceTouched(_hit)
                 if not running or not checkpointsReady then return end
 
-                local touching = downforce:GetTouchingParts() -- все части, с которыми сейчас соприкасается[web:573][web:577]
+                local touching = downforce:GetTouchingParts() -- все части, которых касается DownforceF[web:573][web:581]
                 for _, p in ipairs(touching) do
                     local idx = checkpointsByPart[p]
                     if idx then
