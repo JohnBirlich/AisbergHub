@@ -23,7 +23,7 @@ local RACE1_START_CF = CFrame.new(
     -5.31971455e-06, -0.309032798, 0.951051414
 )
 
-local START_RADIUS = 30 -- радиус зоны старта
+local START_RADIUS = 30 -- сейчас не используется, но можно пригодится
 
 --------------------------------------------------
 -- Welcome баннер
@@ -540,6 +540,7 @@ local function createMainGui()
         return inCar
     end
 
+    -- isPlayerAtRace1Start остаётся, но больше не используется в runRace1Loop
     local function isPlayerAtRace1Start()
         local char = LocalPlayer.Character
         local hrp  = char and char:FindFirstChild("HumanoidRootPart")
@@ -607,7 +608,7 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Auto City Highway Race 🏁 (логика «жду у старта»)
+    -- Auto City Highway Race 🏁 (теперь только проверка «в машине»)
     --------------------------------------------------
 
     local function runRace1Loop()
@@ -616,13 +617,13 @@ local function createMainGui()
             print("[AisbergHub] Auto City Highway Race loop started")
 
             while race1Running do
-                -- 1) ждём, пока игрок в машине и в стартовой зоне
-                while race1Running and (not isPlayerInCar() or not isPlayerAtRace1Start()) do
+                -- 1) ждём, пока игрок сядет в машину (где угодно)
+                while race1Running and not isPlayerInCar() do
                     task.wait(0.2)
                 end
                 if not race1Running then break end
 
-                print("[AisbergHub] Player at Race1 start, waiting 5s for manual race start")
+                print("[AisbergHub] Player in car, waiting 5s for manual race start")
 
                 -- 2) даём 5 секунд, чтобы ты успел нажать Start в их меню
                 for i = 1, 50 do
@@ -639,13 +640,9 @@ local function createMainGui()
                 end
                 if not race1Running then break end
 
-                -- если за это время ты вылез из машины или ушёл от старта — начинаем цикл заново
+                -- если за это время ты вылез из машины — начинаем цикл заново
                 if not isPlayerInCar() then
                     warn("[runRace1Loop] Player left car before route, restarting wait loop")
-                    continue
-                end
-                if not isPlayerAtRace1Start() then
-                    warn("[runRace1Loop] Player left start area before route, restarting wait loop")
                     continue
                 end
 
