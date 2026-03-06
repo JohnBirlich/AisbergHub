@@ -9,15 +9,6 @@ local TweenService      = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
-
-print("====================================================")
-print("  AisbergHub | Midnight Chasers Utilities Loaded")
-print("  Anti-AFK | Autofarm | Auto Races 🏁")
-print("  User:", LocalPlayer.Name, "| Display:", LocalPlayer.DisplayName)
-print("====================================================")
-
-print("Anti AFK launching")
 
 --------------------------------------------------
 -- Welcome баннер
@@ -71,7 +62,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Autofarm • User:", LocalPlayer.Name, "| Display:", LocalPlayer.DisplayName"
+    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Future Races"
     desc.Parent = frame
 
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -94,755 +85,761 @@ local function showWelcomeAndThen(callback)
     if callback then callback() end
 end
 
-
 --------------------------------------------------
--- Anti AFK
---------------------------------------------------
-
-LocalPlayer.Idled:Connect(function()
-    warn("Anti AFK triggered, sending fake input")
-    local vu = game:GetService("VirtualUser")
-    vu:CaptureController()
-    vu:ClickButton2(Vector2.new())
-end)
-
---------------------------------------------------
--- GUI
+-- Основной GUI (создаём через welcome)
 --------------------------------------------------
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MidnightChasersGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = PlayerGui
+local function createMainGui()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 320)
-mainFrame.Position = UDim2.new(0, 20, 0.5, -160)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.BorderSizePixel = 0
-title.Font = Enum.Font.GothamBold
-title.Text = "Midnight Chasers GUI"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 16
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = mainFrame
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseButton"
-closeBtn.Size = UDim2.new(0, 30, 1, 0)
-closeBtn.Position = UDim2.new(1, -30, 0, 0)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Text = "X"
-closeBtn.TextSize = 18
-closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-closeBtn.Parent = title
-
-closeBtn.MouseButton1Click:Connect(function()
-    print("[AisbergHub] GUI closed")
-    screenGui:Destroy()
-end)
-
---------------------------------------------------
--- Remove NPCVehicles
---------------------------------------------------
-
-local removeBtn = Instance.new("TextButton")
-removeBtn.Size = UDim2.new(1, -20, 0, 30)
-removeBtn.Position = UDim2.new(0, 10, 0, 40)
-removeBtn.BackgroundColor3 = Color3.fromRGB(170, 50, 50)
-removeBtn.BorderSizePixel = 0
-removeBtn.Font = Enum.Font.GothamBold
-removeBtn.Text = "Remove NPC Vehicles"
-removeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-removeBtn.TextSize = 14
-removeBtn.Parent = mainFrame
-
-removeBtn.MouseButton1Click:Connect(function()
-    local ok, err = pcall(function()
-        local folder = Workspace:FindFirstChild("NPCVehicles")
-        if folder then
-            folder:Destroy()
-            print("[AisbergHub] NPC Vehicles removed")
-        else
-            print("[AisbergHub] NPC Vehicles folder not found")
-        end
+    warn("Anti AFK launching")
+    LocalPlayer.Idled:Connect(function()
+        warn("Anti AFK triggered, sending fake input")
+        local vu = game:GetService("VirtualUser")
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
     end)
-    if not ok then
-        warn("[RemoveBtn] Error:", err)
-    end
-end)
 
---------------------------------------------------
--- Speed
---------------------------------------------------
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MidnightChasersGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
 
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(1, -20, 0, 20)
-speedLabel.Position = UDim2.new(0, 10, 0, 80)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Font = Enum.Font.GothamBold
-speedLabel.Text = "Speed:"
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedLabel.TextSize = 14
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-speedLabel.Parent = mainFrame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 260, 0, 320)
+    mainFrame.Position = UDim2.new(0, 20, 0.5, -160)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = screenGui
 
-local speedBox = Instance.new("TextBox")
-speedBox.Name = "SpeedBox"
-speedBox.Size = UDim2.new(1, -20, 0, 25)
-speedBox.Position = UDim2.new(0, 10, 0, 105)
-speedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-speedBox.BorderSizePixel = 0
-speedBox.Font = Enum.Font.Gotham
-speedBox.PlaceholderText = "200–350 норм"
-speedBox.Text = "250"
-speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedBox.TextSize = 14
-speedBox.ClearTextOnFocus = false
-speedBox.Parent = mainFrame
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    title.BorderSizePixel = 0
+    title.Font = Enum.Font.GothamBold
+    title.Text = "Midnight Chasers GUI"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 16
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = mainFrame
 
-local function getSpeed()
-    local n = tonumber(speedBox.Text)
-    if not n or n <= 0 then
-        n = 250
-        speedBox.Text = "250"
-    end
-    return n
-end
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseButton"
+    closeBtn.Size = UDim2.new(0, 30, 1, 0)
+    closeBtn.Position = UDim2.new(1, -30, 0, 0)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Text = "X"
+    closeBtn.TextSize = 18
+    closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    closeBtn.Parent = title
 
---------------------------------------------------
--- Очистка мира (для Autofarm)
---------------------------------------------------
-
-local function hideWorkspaceObjects(plr)
-    local ok, err = pcall(function()
-        if not ReplicatedStorage:FindFirstChild("mrbackupfolder") then
-            local folder = Instance.new("Folder")
-            folder.Name = "mrbackupfolder"
-            folder.Parent = ReplicatedStorage
-        end
-        local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
-
-        local mustRemoveByName = {
-            Bush = true,
-            BeltPole = true,
-            Bridge = true,
-            BridgeAccent = true,
-            Curve = true,
-            GarageLamp = true,
-            Hangar = true,
-            HedgeTall = true,
-            MapBoard = true,
-            PortCraneOversized = true,
-            RailGuide = true
-        }
-
-        for _, v in pairs(Workspace:GetChildren()) do
-            local name = v.Name or ""
-            local isPlayerCar = string.find(name, plr.Name) or string.find(name, plr.DisplayName)
-
-            if v == Workspace.Terrain then
-                continue
-            end
-
-            if mustRemoveByName[name] then
-                v.Parent = backup
-                continue
-            end
-
-            if (v:IsA("Model") or v:IsA("Folder") or v:IsA("MeshPart"))
-                and not isPlayerCar
-                and name ~= "" then
-                v.Parent = backup
-            end
-        end
+    closeBtn.MouseButton1Click:Connect(function()
+        print("[AisbergHub] GUI closed")
+        screenGui:Destroy()
     end)
-    if not ok then
-        warn("[hideWorkspaceObjects] Error:", err)
-    end
-end
 
-local function restoreWorkspaceObjects()
-    local ok, err = pcall(function()
-        local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
-        if backup then
-            for _, v in pairs(backup:GetChildren()) do
-                v.Parent = Workspace
-                task.wait()
+    --------------------------------------------------
+    -- Remove NPCVehicles
+    --------------------------------------------------
+
+    local removeBtn = Instance.new("TextButton")
+    removeBtn.Size = UDim2.new(1, -20, 0, 30)
+    removeBtn.Position = UDim2.new(0, 10, 0, 40)
+    removeBtn.BackgroundColor3 = Color3.fromRGB(170, 50, 50)
+    removeBtn.BorderSizePixel = 0
+    removeBtn.Font = Enum.Font.GothamBold
+    removeBtn.Text = "Remove NPC Vehicles"
+    removeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    removeBtn.TextSize = 14
+    removeBtn.Parent = mainFrame
+
+    removeBtn.MouseButton1Click:Connect(function()
+        local ok, err = pcall(function()
+            local folder = Workspace:FindFirstChild("NPCVehicles")
+            if folder then
+                folder:Destroy()
+                print("[AisbergHub] NPC Vehicles removed")
+            else
+                print("[AisbergHub] NPC Vehicles folder not found")
             end
-        end
-    end)
-    if not ok then
-        warn("[restoreWorkspaceObjects] Error:", err)
-    end
-end
-
---------------------------------------------------
--- Платформы
---------------------------------------------------
-
-local function ensureFarmGround()
-    if not _G.farmGround then
-        local p = Instance.new("Part")
-        p.Name = "FarmGround"
-        p.Anchored = true
-        p.Size = Vector3.new(10000, 10, 10000)
-        p.Transparency = 0
-        p.CanCollide = true
-        p.Parent = Workspace
-        _G.farmGround = p
-    end
-end
-
-local function ensureRaceGround()
-    if not _G.raceGround then
-        local p = Instance.new("Part")
-        p.Name = "RaceGround"
-        p.Anchored = true
-        p.Size = Vector3.new(50, 10, 50)
-        p.Transparency = 1
-        p.CanCollide = true
-        p.Parent = Workspace
-        _G.raceGround = p
-    end
-end
-
---------------------------------------------------
--- Твины
---------------------------------------------------
-
-local currentTween
-
-local function tweenFarm(car, targetCFrame, speed)
-    local ok, err = pcall(function()
-        ensureFarmGround()
-
-        local plr = LocalPlayer
-        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then
-            warn("[tweenFarm] No HumanoidRootPart")
-            return
-        end
-
-        local targetPos = targetCFrame.Position
-        local dist = (hrp.Position - targetPos).Magnitude
-        local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
-
-        local cfValue = Instance.new("CFrameValue")
-        cfValue.Value = car:GetPrimaryPartCFrame()
-
-        cfValue.Changed:Connect(function()
-            local pos = cfValue.Value.Position
-            _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
-            car:PivotTo(CFrame.new(_G.farmGround.Position + Vector3.new(0, 7, 0), targetPos))
-            car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
         end)
-
-        if currentTween then
-            currentTween:Cancel()
+        if not ok then
+            warn("[RemoveBtn] Error:", err)
         end
-        currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
-        currentTween:Play()
-
-        repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
-
-        cfValue:Destroy()
     end)
-    if not ok then
-        warn("[tweenFarm] Error:", err)
-    end
-end
 
-local function tweenRace(car, targetCFrame, speed)
-    local ok, err = pcall(function()
-        ensureRaceGround()
+    --------------------------------------------------
+    -- Speed
+    --------------------------------------------------
 
-        local plr = LocalPlayer
-        local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then
-            warn("[tweenRace] No HumanoidRootPart")
-            return
+    local speedLabel = Instance.new("TextLabel")
+    speedLabel.Size = UDim2.new(1, -20, 0, 20)
+    speedLabel.Position = UDim2.new(0, 10, 0, 80)
+    speedLabel.BackgroundTransparency = 1
+    speedLabel.Font = Enum.Font.GothamBold
+    speedLabel.Text = "Speed:"
+    speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedLabel.TextSize = 14
+    speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+    speedLabel.Parent = mainFrame
+
+    local speedBox = Instance.new("TextBox")
+    speedBox.Name = "SpeedBox"
+    speedBox.Size = UDim2.new(1, -20, 0, 25)
+    speedBox.Position = UDim2.new(0, 10, 0, 105)
+    speedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    speedBox.BorderSizePixel = 0
+    speedBox.Font = Enum.Font.Gotham
+    speedBox.PlaceholderText = "200–350 норм"
+    speedBox.Text = "250"
+    speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedBox.TextSize = 14
+    speedBox.ClearTextOnFocus = false
+    speedBox.Parent = mainFrame
+
+    local function getSpeed()
+        local n = tonumber(speedBox.Text)
+        if not n or n <= 0 then
+            n = 250
+            speedBox.Text = "250"
         end
+        return n
+    end
 
-        local targetPos = targetCFrame.Position
-        local dist = (hrp.Position - targetPos).Magnitude
-        local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
+    --------------------------------------------------
+    -- Очистка мира (для Autofarm)
+    --------------------------------------------------
 
-        local cfValue = Instance.new("CFrameValue")
-        cfValue.Value = car:GetPrimaryPartCFrame()
+    local function hideWorkspaceObjects(plr)
+        local ok, err = pcall(function()
+            if not ReplicatedStorage:FindFirstChild("mrbackupfolder") then
+                local folder = Instance.new("Folder")
+                folder.Name = "mrbackupfolder"
+                folder.Parent = ReplicatedStorage
+            end
+            local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
 
-        cfValue.Changed:Connect(function()
-            local pos = cfValue.Value.Position
-            _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 2, pos.Z)
-            car:PivotTo(CFrame.new(Vector3.new(pos.X, targetPos.Y + 1, pos.Z), targetPos))
-            car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+            local mustRemoveByName = {
+                Bush = true,
+                BeltPole = true,
+                Bridge = true,
+                BridgeAccent = true,
+                Curve = true,
+                GarageLamp = true,
+                Hangar = true,
+                HedgeTall = true,
+                MapBoard = true,
+                PortCraneOversized = true,
+                RailGuide = true
+            }
+
+            for _, v in pairs(Workspace:GetChildren()) do
+                local name = v.Name or ""
+                local isPlayerCar = string.find(name, plr.Name) or string.find(name, plr.DisplayName)
+
+                if v == Workspace.Terrain then
+                    continue
+                end
+
+                if mustRemoveByName[name] then
+                    v.Parent = backup
+                    continue
+                end
+
+                if (v:IsA("Model") or v:IsA("Folder") or v:IsA("MeshPart"))
+                    and not isPlayerCar
+                    and name ~= "" then
+                    v.Parent = backup
+                end
+            end
         end)
-
-        if currentTween then
-            currentTween:Cancel()
+        if not ok then
+            warn("[hideWorkspaceObjects] Error:", err)
         end
-        currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
-        currentTween:Play()
-
-        repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
-
-        cfValue:Destroy()
-    end)
-    if not ok then
-        warn("[tweenRace] Error:", err)
     end
-end
 
---------------------------------------------------
--- Маршрут фарма
---------------------------------------------------
+    local function restoreWorkspaceObjects()
+        local ok, err = pcall(function()
+            local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
+            if backup then
+                for _, v in pairs(backup:GetChildren()) do
+                    v.Parent = Workspace
+                    task.wait()
+                end
+            end
+        end)
+        if not ok then
+            warn("[restoreWorkspaceObjects] Error:", err)
+        end
+    end
 
-local farmFrames = {
-    CFrame.new(105.419128, -26.0098934, 7965.37988, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(2751.86499, -26.0098934, 3694.63354, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(-8821.48438, -26.0098934, 2042.49939, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(-6408.62109, -26.0098934, -727.765198, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(-6099.79639, -26.00989345, -1027.94556, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(-6066.70068, -26.0098934, 493.255524, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(132.786133, -26.0098934, 15.2286377, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(-7692.85449, -26.0098934, -4668.61963, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
-    CFrame.new(4887.24609, -26.0098934, 1222.96826, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414)
-}
+    --------------------------------------------------
+    -- Платформы
+    --------------------------------------------------
 
---------------------------------------------------
--- City Highway Race (Race1) чекпоинты
---------------------------------------------------
+    local function ensureFarmGround()
+        if not _G.farmGround then
+            local p = Instance.new("Part")
+            p.Name = "FarmGround"
+            p.Anchored = true
+            p.Size = Vector3.new(10000, 10, 10000)
+            p.Transparency = 0
+            p.CanCollide = true
+            p.Parent = Workspace
+            _G.farmGround = p
+        end
+    end
 
-local race1Frames = {
-    -- сюда вставь свой полный список CFrame
-    CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
-    -- ...
-    CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
-}
+    local function ensureRaceGround()
+        if not _G.raceGround then
+            local p = Instance.new("Part")
+            p.Name = "RaceGround"
+            p.Anchored = true
+            p.Size = Vector3.new(50, 10, 50)
+            p.Transparency = 1
+            p.CanCollide = true
+            p.Parent = Workspace
+            _G.raceGround = p
+        end
+    end
 
---------------------------------------------------
--- Заготовки маршрутов Race2–Race4
---------------------------------------------------
+    --------------------------------------------------
+    -- Твины
+    --------------------------------------------------
 
-local race2Frames = {}
-local race3Frames = {}
-local race4Frames = {}
+    local currentTween
 
---------------------------------------------------
--- Машина
---------------------------------------------------
+    local function tweenFarm(car, targetCFrame, speed)
+        local ok, err = pcall(function()
+            ensureFarmGround()
 
-local function getCar()
-    local ok, result = pcall(function()
-        local plr = LocalPlayer
-        local char = plr.Character
-        if not char then return nil end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local seat = hum and hum.SeatPart
-        if not seat then return nil end
+            local plr = LocalPlayer
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[tweenFarm] No HumanoidRootPart")
+                return
+            end
 
-        local car = seat.Parent
-        local body = car:FindFirstChild("Body")
-        local weight = body and body:FindFirstChild("#Weight")
-        if not weight then
-            warn("[getCar] Body/#Weight not found")
+            local targetPos = targetCFrame.Position
+            local dist = (hrp.Position - targetPos).Magnitude
+            local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
+
+            local cfValue = Instance.new("CFrameValue")
+            cfValue.Value = car:GetPrimaryPartCFrame()
+
+            cfValue.Changed:Connect(function()
+                local pos = cfValue.Value.Position
+                _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
+                car:PivotTo(CFrame.new(_G.farmGround.Position + Vector3.new(0, 7, 0), targetPos))
+                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+            end)
+
+            if currentTween then
+                currentTween:Cancel()
+            end
+            currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
+            currentTween:Play()
+
+            repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
+
+            cfValue:Destroy()
+        end)
+        if not ok then
+            warn("[tweenFarm] Error:", err)
+        end
+    end
+
+    local function tweenRace(car, targetCFrame, speed)
+        local ok, err = pcall(function()
+            ensureRaceGround()
+
+            local plr = LocalPlayer
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[tweenRace] No HumanoidRootPart")
+                return
+            end
+
+            local targetPos = targetCFrame.Position
+            local dist = (hrp.Position - targetPos).Magnitude
+            local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
+
+            local cfValue = Instance.new("CFrameValue")
+            cfValue.Value = car:GetPrimaryPartCFrame()
+
+            cfValue.Changed:Connect(function()
+                local pos = cfValue.Value.Position
+                _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 2, pos.Z)
+                car:PivotTo(CFrame.new(Vector3.new(pos.X, targetPos.Y + 1, pos.Z), targetPos))
+                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+            end)
+
+            if currentTween then
+                currentTween:Cancel()
+            end
+            currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
+            currentTween:Play()
+
+            repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
+
+            cfValue:Destroy()
+        end)
+        if not ok then
+            warn("[tweenRace] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
+    -- Маршрут фарма
+    --------------------------------------------------
+
+    local farmFrames = {
+        CFrame.new(105.419128, -26.0098934, 7965.37988, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(2751.86499, -26.0098934, 3694.63354, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-8821.48438, -26.0098934, 2042.49939, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-6408.62109, -26.0098934, -727.765198, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-6099.79639, -26.00989345, -1027.94556, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-6066.70068, -26.0098934, 493.255524, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(132.786133, -26.0098934, 15.2286377, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-7692.85449, -26.0098934, -4668.61963, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(4887.24609, -26.0098934, 1222.96826, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414)
+    }
+
+    --------------------------------------------------
+    -- City Highway Race (Race1) чекпоинты
+    --------------------------------------------------
+
+    local race1Frames = {
+        -- вставь сюда свой полный список CFrame
+        CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
+        -- ...
+        CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
+    }
+
+    --------------------------------------------------
+    -- Заготовки маршрутов Race2–Race4
+    --------------------------------------------------
+
+    local race2Frames = {}
+    local race3Frames = {}
+    local race4Frames = {}
+
+    --------------------------------------------------
+    -- Машина
+    --------------------------------------------------
+
+    local function getCar()
+        local ok, result = pcall(function()
+            local plr = LocalPlayer
+            local char = plr.Character
+            if not char then return nil end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local seat = hum and hum.SeatPart
+            if not seat then return nil end
+
+            local car = seat.Parent
+            local body = car:FindFirstChild("Body")
+            local weight = body and body:FindFirstChild("#Weight")
+            if not weight then
+                warn("[getCar] Body/#Weight not found")
+                return nil
+            end
+
+            car.PrimaryPart = weight
+            return car
+        end)
+        if not ok then
+            warn("[getCar] Error:", result)
             return nil
         end
-
-        car.PrimaryPart = weight
-        return car
-    end)
-    if not ok then
-        warn("[getCar] Error:", result)
-        return nil
+        return result
     end
-    return result
-end
 
---------------------------------------------------
--- Флаги гонок
---------------------------------------------------
+    --------------------------------------------------
+    -- Флаги гонок
+    --------------------------------------------------
 
-local autofarmRunning = false
-local race1Running   = false
-local race2Running   = false
-local race3Running   = false
-local race4Running   = false
+    local autofarmRunning = false
+    local race1Running   = false
+    local race2Running   = false
+    local race3Running   = false
+    local race4Running   = false
 
---------------------------------------------------
--- Автофарм
---------------------------------------------------
+    --------------------------------------------------
+    -- Автофарм
+    --------------------------------------------------
 
-local function runFarmRoute()
-    local ok, err = pcall(function()
-        autofarmRunning = true
-        print("[AisbergHub] Autofarm loop started")
+    local function runFarmRoute()
+        local ok, err = pcall(function()
+            autofarmRunning = true
+            print("[AisbergHub] Autofarm loop started")
 
-        local plr = LocalPlayer
-        hideWorkspaceObjects(plr)
-        ensureFarmGround()
-        task.wait()
+            local plr = LocalPlayer
+            hideWorkspaceObjects(plr)
+            ensureFarmGround()
+            task.wait()
 
-        while autofarmRunning do
-            local car = getCar()
-            if not car then
-                task.wait(0.5)
-            else
-                local speed = getSpeed()
-                for _, cf in ipairs(farmFrames) do
-                    if not autofarmRunning then break end
-                    tweenFarm(car, cf, speed)
-                end
-            end
-        end
-
-        if currentTween then
-            currentTween:Cancel()
-        end
-        restoreWorkspaceObjects()
-        print("[AisbergHub] Autofarm loop exited")
-    end)
-    if not ok then
-        warn("[runFarmRoute] Error:", err)
-        autofarmRunning = false
-    end
-end
-
---------------------------------------------------
--- Общие функции для Races
---------------------------------------------------
-
-local function getRaceByName(raceName)
-    local races = Workspace:FindFirstChild("Races")
-    if not races then return nil end
-    return races:FindFirstChild(raceName)
-end
-
-local function getRaceConfig(raceName)
-    local race = getRaceByName(raceName)
-    if not race then return nil end
-    return race:FindFirstChild("Config")
-end
-
-local function startSoloForRace(raceName)
-    local ok, err = pcall(function()
-        local config = getRaceConfig(raceName)
-        if not config then
-            warn("[startSoloForRace] No Config for", raceName)
-            return
-        end
-        local solo = config:FindFirstChild("Solo")
-        if solo and solo:IsA("BoolValue") then
-            solo.Value = true
-        else
-            warn("[startSoloForRace] Solo BoolValue not found for", raceName)
-        end
-    end)
-    if not ok then
-        warn("[startSoloForRace] Error:", err)
-    end
-end
-
---------------------------------------------------
--- Teleport к старту Race1
---------------------------------------------------
-
-local function teleportToRace1Start()
-    local ok, err = pcall(function()
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then
-            warn("[teleportToRace1Start] No HumanoidRootPart")
-            return
-        end
-
-        hrp.CFrame = CFrame.new(
-            3260.53076, -7.51575422, 1015.698,
-            -3.36170197e-05, -0.951051414, -0.309032798,
-            1, -3.36170197e-05, -5.31971455e-06,
-            -5.31971455e-06, -0.309032798, 0.951051414
-        )
-    end)
-    if not ok then
-        warn("[teleportToRace1Start] Error:", err)
-    end
-end
-
---------------------------------------------------
--- Auto City Highway Race 🏁
---------------------------------------------------
-
-local function runRace1Route()
-    local ok, err = pcall(function()
-        race1Running = true
-        print("[AisbergHub] Auto City Highway Race loop started")
-
-        while race1Running do
-            teleportToRace1Start()
-            if not race1Running then break end
-
-            startSoloForRace("Race1")
-            if not race1Running then break end
-
-            task.wait(4)
-            if not race1Running then break end
-
-            local car
-            for i = 1, 60 do
-                car = getCar()
-                if car then break end
-                task.wait(0.1)
-                if not race1Running then break end
-            end
-            if not race1Running or not car then
+            while autofarmRunning do
+                local car = getCar()
                 if not car then
-                    warn("[runRace1Route] Car not found, breaking loop")
-                end
-                break
-            end
-
-            local speed = getSpeed()
-
-            for idx, cf in ipairs(race1Frames) do
-                if not race1Running then break end
-                tweenRace(car, cf, speed)
-                if idx == #race1Frames then
-                    break
+                    task.wait(0.5)
+                else
+                    local speed = getSpeed()
+                    for _, cf in ipairs(farmFrames) do
+                        if not autofarmRunning then break end
+                        tweenFarm(car, cf, speed)
+                    end
                 end
             end
 
             if currentTween then
                 currentTween:Cancel()
             end
-            if not race1Running then break end
-
-            teleportToRace1Start()
-            if not race1Running then break end
-
-            task.wait(3)
-            if not race1Running then break end
-
-            startSoloForRace("Race1")
-        end
-
-        if _G.raceGround then
-            _G.raceGround:Destroy()
-            _G.raceGround = nil
-        end
-
-        race1Running = false
-        print("[AisbergHub] Auto City Highway Race loop exited")
-    end)
-    if not ok then
-        warn("[runRace1Route] Error:", err)
-        race1Running = false
-        if _G.raceGround then
-            _G.raceGround:Destroy()
-            _G.raceGround = nil
-        end
-    end
-end
-
---------------------------------------------------
--- Заглушки Race2–Race4
---------------------------------------------------
-
-local function runRace2Route()
-    race2Running = true
-    print("[AisbergHub] Auto Rainbow Bridge Sprint loop (Race2) not implemented yet")
-    task.wait(1)
-    race2Running = false
-end
-
-local function runRace3Route()
-    race3Running = true
-    print("[AisbergHub] Auto Dojo Sprint loop (Race3) not implemented yet")
-    task.wait(1)
-    race3Running = false
-end
-
-local function runRace4Route()
-    race4Running = true
-    print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) not implemented yet")
-    task.wait(1)
-    race4Running = false
-end
-
---------------------------------------------------
--- Кнопки
---------------------------------------------------
-
-local autofarmBtn = Instance.new("TextButton")
-autofarmBtn.Size = UDim2.new(1, -20, 0, 30)
-autofarmBtn.Position = UDim2.new(0, 10, 0, 140)
-autofarmBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-autofarmBtn.BorderSizePixel = 0
-autofarmBtn.Font = Enum.Font.GothamBold
-autofarmBtn.Text = "Start Autofarm"
-autofarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-autofarmBtn.TextSize = 14
-autofarmBtn.Parent = mainFrame
-
-local race1Btn = Instance.new("TextButton")
-race1Btn.Size = UDim2.new(1, -20, 0, 30)
-race1Btn.Position = UDim2.new(0, 10, 0, 175)
-race1Btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-race1Btn.BorderSizePixel = 0
-race1Btn.Font = Enum.Font.GothamBold
-race1Btn.Text = "Auto City Highway Race 🏁"
-race1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-race1Btn.TextSize = 13
-race1Btn.Parent = mainFrame
-
-local race2Btn = Instance.new("TextButton")
-race2Btn.Size = UDim2.new(1, -20, 0, 30)
-race2Btn.Position = UDim2.new(0, 10, 0, 210)
-race2Btn.BackgroundColor3 = Color3.fromRGB(80, 120, 150)
-race2Btn.BorderSizePixel = 0
-race2Btn.Font = Enum.Font.GothamBold
-race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
-race2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-race2Btn.TextSize = 11
-race2Btn.Parent = mainFrame
-
-local race3Btn = Instance.new("TextButton")
-race3Btn.Size = UDim2.new(1, -20, 0, 30)
-race3Btn.Position = UDim2.new(0, 10, 0, 245)
-race3Btn.BackgroundColor3 = Color3.fromRGB(80, 150, 120)
-race3Btn.BorderSizePixel = 0
-race3Btn.Font = Enum.Font.GothamBold
-race3Btn.Text = "Auto Dojo Sprint 🏁"
-race3Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-race3Btn.TextSize = 12
-race3Btn.Parent = mainFrame
-
-local race4Btn = Instance.new("TextButton")
-race4Btn.Size = UDim2.new(1, -20, 0, 30)
-race4Btn.Position = UDim2.new(0, 10, 0, 280)
-race4Btn.BackgroundColor3 = Color3.fromRGB(110, 80, 150)
-race4Btn.BorderSizePixel = 0
-race4Btn.Font = Enum.Font.GothamBold
-race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
-race4Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-race4Btn.TextSize = 9
-race4Btn.Parent = mainFrame
-
-autofarmBtn.MouseButton1Click:Connect(function()
-    if race1Running or race2Running or race3Running or race4Running then return end
-    if not autofarmRunning then
-        autofarmRunning = true
-        autofarmBtn.Text = "Stop Autofarm"
-        print("[AisbergHub] Autofarm started")
-        task.spawn(function()
-            runFarmRoute()
+            restoreWorkspaceObjects()
+            print("[AisbergHub] Autofarm loop exited")
+        end)
+        if not ok then
+            warn("[runFarmRoute] Error:", err)
             autofarmRunning = false
-            autofarmBtn.Text = "Start Autofarm"
-            print("[AisbergHub] Autofarm stopped")
-        end)
-    else
-        autofarmRunning = false
-        if currentTween then
-            currentTween:Cancel()
         end
-        print("[AisbergHub] Autofarm stopped (by button)")
     end
-end)
 
-race1Btn.MouseButton1Click:Connect(function()
-    if autofarmRunning or race2Running or race3Running or race4Running then return end
-    if not race1Running then
-        race1Running = true
-        race1Btn.Text = "Stop City Highway Race 🏁"
-        print("[AisbergHub] Auto City Highway Race started")
-        task.spawn(function()
-            runRace1Route()
-            race1Btn.Text = "Auto City Highway Race 🏁"
-            print("[AisbergHub] Auto City Highway Race stopped")
-        end)
-    else
-        race1Running = false
-        if currentTween then
-            currentTween:Cancel()
-        end
-        if _G.raceGround then
-            _G.raceGround:Destroy()
-            _G.raceGround = nil
-        end
-        print("[AisbergHub] Auto City Highway Race stopped (by button)")
+    --------------------------------------------------
+    -- Общие функции для Races
+    --------------------------------------------------
+
+    local function getRaceByName(raceName)
+        local races = Workspace:FindFirstChild("Races")
+        if not races then return nil end
+        return races:FindFirstChild(raceName)
     end
-end)
 
-race2Btn.MouseButton1Click:Connect(function()
-    if autofarmRunning or race1Running or race3Running or race4Running then return end
-    if not race2Running then
+    local function getRaceConfig(raceName)
+        local race = getRaceByName(raceName)
+        if not race then return nil end
+        return race:FindFirstChild("Config")
+    end
+
+    local function startSoloForRace(raceName)
+        local ok, err = pcall(function()
+            local config = getRaceConfig(raceName)
+            if not config then
+                warn("[startSoloForRace] No Config for", raceName)
+                return
+            end
+            local solo = config:FindFirstChild("Solo")
+            if solo and solo:IsA("BoolValue") then
+                solo.Value = true
+            else
+                warn("[startSoloForRace] Solo BoolValue not found for", raceName)
+            end
+        end)
+        if not ok then
+            warn("[startSoloForRace] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
+    -- Teleport к старту Race1
+    --------------------------------------------------
+
+    local function teleportToRace1Start()
+        local ok, err = pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[teleportToRace1Start] No HumanoidRootPart")
+                return
+            end
+
+            hrp.CFrame = CFrame.new(
+                3260.53076, -7.51575422, 1015.698,
+                -3.36170197e-05, -0.951051414, -0.309032798,
+                1, -3.36170197e-05, -5.31971455e-06,
+                -5.31971455e-06, -0.309032798, 0.951051414
+            )
+        end)
+        if not ok then
+            warn("[teleportToRace1Start] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
+    -- Auto City Highway Race 🏁
+    --------------------------------------------------
+
+    local function runRace1Route()
+        local ok, err = pcall(function()
+            race1Running = true
+            print("[AisbergHub] Auto City Highway Race loop started")
+
+            while race1Running do
+                teleportToRace1Start()
+                if not race1Running then break end
+
+                startSoloForRace("Race1")
+                if not race1Running then break end
+
+                task.wait(4)
+                if not race1Running then break end
+
+                local car
+                for i = 1, 60 do
+                    car = getCar()
+                    if car then break end
+                    task.wait(0.1)
+                    if not race1Running then break end
+                end
+                if not race1Running or not car then
+                    if not car then
+                        warn("[runRace1Route] Car not found, breaking loop")
+                    end
+                    break
+                end
+
+                local speed = getSpeed()
+
+                for idx, cf in ipairs(race1Frames) do
+                    if not race1Running then break end
+                    tweenRace(car, cf, speed)
+                    if idx == #race1Frames then
+                        break
+                    end
+                end
+
+                if currentTween then
+                    currentTween:Cancel()
+                end
+                if not race1Running then break end
+
+                teleportToRace1Start()
+                if not race1Running then break end
+
+                task.wait(3)
+                if not race1Running then break end
+
+                startSoloForRace("Race1")
+            end
+
+            if _G.raceGround then
+                _G.raceGround:Destroy()
+                _G.raceGround = nil
+            end
+
+            race1Running = false
+            print("[AisbergHub] Auto City Highway Race loop exited")
+        end)
+        if not ok then
+            warn("[runRace1Route] Error:", err)
+            race1Running = false
+            if _G.raceGround then
+                _G.raceGround:Destroy()
+                _G.raceGround = nil
+            end
+        end
+    end
+
+    --------------------------------------------------
+    -- Заглушки Race2–Race4
+    --------------------------------------------------
+
+    local function runRace2Route()
         race2Running = true
-        race2Btn.Text = "Stop Rainbow Bridge Sprint 🏁"
-        task.spawn(function()
-            runRace2Route()
-            race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
-        end)
-    else
+        print("[AisbergHub] Auto Rainbow Bridge Sprint loop (Race2) not implemented yet")
+        task.wait(1)
         race2Running = false
-        if currentTween then
-            currentTween:Cancel()
-        end
     end
-end)
 
-race3Btn.MouseButton1Click:Connect(function()
-    if autofarmRunning or race1Running or race2Running or race4Running then return end
-    if not race3Running then
+    local function runRace3Route()
         race3Running = true
-        race3Btn.Text = "Stop Dojo Sprint 🏁"
-        task.spawn(function()
-            runRace3Route()
-            race3Btn.Text = "Auto Dojo Sprint 🏁"
-        end)
-    else
+        print("[AisbergHub] Auto Dojo Sprint loop (Race3) not implemented yet")
+        task.wait(1)
         race3Running = false
-        if currentTween then
-            currentTween:Cancel()
-        end
     end
-end)
 
-race4Btn.MouseButton1Click:Connect(function()
-    if autofarmRunning or race1Running or race2Running or race3Running then return end
-    if not race4Running then
+    local function runRace4Route()
         race4Running = true
-        race4Btn.Text = "Stop Rainbow Rinkai Dojo Sprint 🏁"
-        task.spawn(function()
-            runRace4Route()
-            race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
-        end)
-    else
+        print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) not implemented yet")
+        task.wait(1)
         race4Running = false
-        if currentTween then
-            currentTween:Cancel()
-        end
     end
-end)
+
+    --------------------------------------------------
+    -- Кнопки
+    --------------------------------------------------
+
+    local autofarmBtn = Instance.new("TextButton")
+    autofarmBtn.Size = UDim2.new(1, -20, 0, 30)
+    autofarmBtn.Position = UDim2.new(0, 10, 0, 140)
+    autofarmBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+    autofarmBtn.BorderSizePixel = 0
+    autofarmBtn.Font = Enum.Font.GothamBold
+    autofarmBtn.Text = "Start Autofarm"
+    autofarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    autofarmBtn.TextSize = 14
+    autofarmBtn.Parent = mainFrame
+
+    local race1Btn = Instance.new("TextButton")
+    race1Btn.Size = UDim2.new(1, -20, 0, 30)
+    race1Btn.Position = UDim2.new(0, 10, 0, 175)
+    race1Btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+    race1Btn.BorderSizePixel = 0
+    race1Btn.Font = Enum.Font.GothamBold
+    race1Btn.Text = "Auto City Highway Race 🏁"
+    race1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race1Btn.TextSize = 13
+    race1Btn.Parent = mainFrame
+
+    local race2Btn = Instance.new("TextButton")
+    race2Btn.Size = UDim2.new(1, -20, 0, 30)
+    race2Btn.Position = UDim2.new(0, 10, 0, 210)
+    race2Btn.BackgroundColor3 = Color3.fromRGB(80, 120, 150)
+    race2Btn.BorderSizePixel = 0
+    race2Btn.Font = Enum.Font.GothamBold
+    race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
+    race2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race2Btn.TextSize = 11
+    race2Btn.Parent = mainFrame
+
+    local race3Btn = Instance.new("TextButton")
+    race3Btn.Size = UDim2.new(1, -20, 0, 30)
+    race3Btn.Position = UDim2.new(0, 10, 0, 245)
+    race3Btn.BackgroundColor3 = Color3.fromRGB(80, 150, 120)
+    race3Btn.BorderSizePixel = 0
+    race3Btn.Font = Enum.Font.GothamBold
+    race3Btn.Text = "Auto Dojo Sprint 🏁"
+    race3Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race3Btn.TextSize = 12
+    race3Btn.Parent = mainFrame
+
+    local race4Btn = Instance.new("TextButton")
+    race4Btn.Size = UDim2.new(1, -20, 0, 30)
+    race4Btn.Position = UDim2.new(0, 10, 0, 280)
+    race4Btn.BackgroundColor3 = Color3.fromRGB(110, 80, 150)
+    race4Btn.BorderSizePixel = 0
+    race4Btn.Font = Enum.Font.GothamBold
+    race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
+    race4Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race4Btn.TextSize = 9
+    race4Btn.Parent = mainFrame
+
+    autofarmBtn.MouseButton1Click:Connect(function()
+        if race1Running or race2Running or race3Running or race4Running then return end
+        if not autofarmRunning then
+            autofarmRunning = true
+            autofarmBtn.Text = "Stop Autofarm"
+            print("[AisbergHub] Autofarm started")
+            task.spawn(function()
+                runFarmRoute()
+                autofarmRunning = false
+                autofarmBtn.Text = "Start Autofarm"
+                print("[AisbergHub] Autofarm stopped")
+            end)
+        else
+            autofarmRunning = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+            print("[AisbergHub] Autofarm stopped (by button)")
+        end
+    end)
+
+    race1Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race2Running or race3Running or race4Running then return end
+        if not race1Running then
+            race1Running = true
+            race1Btn.Text = "Stop City Highway Race 🏁"
+            print("[AisbergHub] Auto City Highway Race started")
+            task.spawn(function()
+                runRace1Route()
+                race1Btn.Text = "Auto City Highway Race 🏁"
+                print("[AisbergHub] Auto City Highway Race stopped")
+            end)
+        else
+            race1Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+            if _G.raceGround then
+                _G.raceGround:Destroy()
+                _G.raceGround = nil
+            end
+            print("[AisbergHub] Auto City Highway Race stopped (by button)")
+        end
+    end)
+
+    race2Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race1Running or race3Running or race4Running then return end
+        if not race2Running then
+            race2Running = true
+            race2Btn.Text = "Stop Rainbow Bridge Sprint 🏁"
+            task.spawn(function()
+                runRace2Route()
+                race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
+            end)
+        else
+            race2Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+        end
+    end)
+
+    race3Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race1Running or race2Running or race4Running then return end
+        if not race3Running then
+            race3Running = true
+            race3Btn.Text = "Stop Dojo Sprint 🏁"
+            task.spawn(function()
+                runRace3Route()
+                race3Btn.Text = "Auto Dojo Sprint 🏁"
+            end)
+        else
+            race3Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+        end
+    end)
+
+    race4Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race1Running or race2Running or race3Running then return end
+        if not race4Running then
+            race4Running = true
+            race4Btn.Text = "Stop Rainbow Rinkai Dojo Sprint 🏁"
+            task.spawn(function()
+                runRace4Route()
+                race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
+            end)
+        else
+            race4Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+        end
+    end)
+
+    --------------------------------------------------
+    -- Тоггл GUI на G
+    --------------------------------------------------
+
+    UIS.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.KeyCode == Enum.KeyCode.G then
+            if screenGui and screenGui.Parent then
+                screenGui.Enabled = not screenGui.Enabled
+                print("[AisbergHub] GUI toggled, Enabled =", screenGui.Enabled)
+            end
+        end
+    end)
+end
 
 --------------------------------------------------
--- Тоггл GUI на G
+-- Запуск: сначала баннер, потом основной GUI
 --------------------------------------------------
 
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.G then
-        if screenGui and screenGui.Parent then
-            screenGui.Enabled = not screenGui.Enabled
-            print("[AisbergHub] GUI toggled, Enabled =", screenGui.Enabled)
-        end
-    end
-end)
+showWelcomeAndThen(createMainGui)
