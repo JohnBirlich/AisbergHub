@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (стабильный drag/resize, разделённый output) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (простой drag, resize, разделённый output) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -57,7 +57,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Debug • City Highway Race • Playtime Rewards"
+    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Playtime Rewards"
     desc.Parent = frame
 
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -97,57 +97,58 @@ local function createPlaytimeDebugWindow()
     main.BorderSizePixel = 0
     main.Parent = debugGui
 
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    title.BorderSizePixel = 0
+    title.Font = Enum.Font.GothamBold
+    title.Text = "AisbergHub • Playtime Debug"
+    title.TextSize = 14
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = main
+
     --------------------------------------------------
-    -- DRAG (устойчивый шаблон)
+    -- ПРОСТОЙ DRAG
     --------------------------------------------------
 
-local dragging = false
-local dragStart
-local startPos
+    local dragging = false
+    local dragStart
+    local startPos
 
-title.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = main.Position
-    end
-end)
+    title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+        end
+    end)
 
-title.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
+    title.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
 
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        main.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
-    title.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
         end
     end)
 
     UIS.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
-            updateDrag(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            main.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
         end
     end)
+
+    --------------------------------------------------
 
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -350,7 +351,7 @@ end)
     end)
 
     --------------------------------------------------
-    -- RESIZE (позицию main не трогаем)
+    -- RESIZE
     --------------------------------------------------
 
     local resizeHandle = Instance.new("Frame")
