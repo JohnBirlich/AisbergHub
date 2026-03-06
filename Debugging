@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (раздельный drag/resize, разделённый output) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (норм drag/resize, разделённый output) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -98,12 +98,13 @@ local function createPlaytimeDebugWindow()
     main.Parent = debugGui
 
     --------------------------------------------------
-    -- DRAG (отдельно)
+    -- DRAG (устойчивый вариант с dragInput)
     --------------------------------------------------
 
     local dragging = false
-    local dragStartMouse
-    local dragStartPos
+    local dragInput
+    local dragStart
+    local startPos
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 30)
@@ -116,31 +117,40 @@ local function createPlaytimeDebugWindow()
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = main
 
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+
     title.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStartMouse = input.Position
-            dragStartPos = main.Position
+            dragStart = input.Position
+            startPos = main.Position
+
+            input.Changed:Connect(function(state)
+                if state == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
         end
     end)
 
-    title.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
+    title.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
         end
     end)
 
     UIS.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-
-        local delta = input.Position - dragStartMouse
-        main.Position = UDim2.new(
-            dragStartPos.X.Scale,
-            dragStartPos.X.Offset + delta.X,
-            dragStartPos.Y.Scale,
-            dragStartPos.Y.Offset + delta.Y
-        )
+        if dragging and input == dragInput then
+            updateDrag(input)
+        end
     end)
 
     local closeBtn = Instance.new("TextButton")
