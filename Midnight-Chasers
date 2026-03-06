@@ -1484,6 +1484,7 @@ end
             print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint stopped (by button)")
         end
     end)
+
     --------------------------------------------------
     -- Тоггл GUI на G
     --------------------------------------------------
