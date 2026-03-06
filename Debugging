@@ -1,10 +1,11 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local LocalizationService = game:GetService("LocalizationService")
 
 --------------------------------------------------
 -- Welcome баннер
@@ -98,7 +99,7 @@ local function createPlaytimeDebugWindow()
     main.BorderSizePixel = 0
     main.Parent = debugGui
 
-    -- минимальный размер = стартовый размер
+    -- минимальный размер = стартовый размер окна
     local minWidth  = main.Size.X.Offset
     local minHeight = main.Size.Y.Offset
 
@@ -200,7 +201,7 @@ local function createPlaytimeDebugWindow()
     copyBtn.Parent = main
 
     --------------------------------------------------
-    -- FPS / Memory статус-бар
+    -- FPS / Memory / Ping / Country статус-бар
     --------------------------------------------------
 
     local statsLabel = Instance.new("TextLabel")
@@ -211,11 +212,23 @@ local function createPlaytimeDebugWindow()
     statsLabel.TextSize = 13
     statsLabel.TextXAlignment = Enum.TextXAlignment.Left
     statsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-    statsLabel.Text = "FPS: ...  |  LuaMem: ..."
+    statsLabel.Text = "FPS: ...  |  LuaMem: ...  |  Ping: ... ms  |  Country: ..."
     statsLabel.Parent = main
 
     local lastUpdate = 0
     local frameCount = 0
+    local cachedCountry = "..."
+
+    task.spawn(function()
+        local ok, region = pcall(function()
+            return LocalizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
+        end)
+        if ok and typeof(region) == "string" and region ~= "" then
+            cachedCountry = region
+        else
+            cachedCountry = "N/A"
+        end
+    end)
 
     RunService.RenderStepped:Connect(function(dt)
         frameCount += 1
@@ -223,9 +236,20 @@ local function createPlaytimeDebugWindow()
 
         if lastUpdate >= 0.5 then
             local fps = math.floor(frameCount / lastUpdate + 0.5)
-            local kb = collectgarbage("count") -- в КБ[web:328]
+
+            local kb = collectgarbage("count") -- KB[web:328]
             local mb = kb / 1024
-            statsLabel.Text = string.format("FPS: %d  |  LuaMem: %.2f MB", fps, mb)
+
+            local pingSec = LocalPlayer:GetNetworkPing() or 0 -- seconds[web:344]
+            local pingMs = math.floor(pingSec * 2000)
+
+            statsLabel.Text = string.format(
+                "FPS: %d  |  LuaMem: %.2f MB  |  Ping: %d ms  |  Country: %s",
+                fps,
+                mb,
+                pingMs,
+                cachedCountry
+            )
 
             frameCount = 0
             lastUpdate = 0
@@ -237,7 +261,7 @@ local function createPlaytimeDebugWindow()
     --------------------------------------------------
 
     local topContainer = Instance.new("Frame")
-    topContainer.Size = UDim2.new(1, -20, 0.5, -80) -- чуть ниже из‑за statsLabel
+    topContainer.Size = UDim2.new(1, -20, 0.5, -80)
     topContainer.Position = UDim2.new(0, 10, 0, 100)
     topContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     topContainer.BorderSizePixel = 0
@@ -269,7 +293,7 @@ local function createPlaytimeDebugWindow()
     topScroll.ScrollBarThickness = 6
     topScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
     topScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     topScroll.ScrollingEnabled = true
     topScroll.ClipsDescendants = true
     topScroll.Parent = topContainer
@@ -289,7 +313,10 @@ local function createPlaytimeDebugWindow()
     logLabel.Parent = topScroll
 
     local function updateTopCanvas()
-        topScroll.CanvasSize = UDim2.new(0, 0, 0, logLabel.AbsoluteSize.Y + 10)
+        local contentHeight = logLabel.AbsoluteSize.Y
+        local frameHeight = topScroll.AbsoluteSize.Y
+        local canvasY = math.max(contentHeight + 4, frameHeight + 1)
+        topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
     logLabel:GetPropertyChangedSignal("Text"):Connect(function()
@@ -300,6 +327,10 @@ local function createPlaytimeDebugWindow()
                 math.max(topScroll.CanvasSize.Y.Offset - topScroll.AbsoluteSize.Y, 0)
             )
         end)
+    end)
+
+    topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        updateTopCanvas()
     end)
 
     local function appendLine(text)
@@ -351,7 +382,7 @@ local function createPlaytimeDebugWindow()
     bottomScroll.ScrollBarThickness = 6
     bottomScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
     bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     bottomScroll.ScrollingEnabled = true
     bottomScroll.ClipsDescendants = true
     bottomScroll.Parent = bottomContainer
@@ -374,10 +405,17 @@ local function createPlaytimeDebugWindow()
     copyBox.Parent = bottomScroll
 
     local function updateBottomCanvas()
-        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, copyBox.AbsoluteSize.Y + 10)
+        local contentHeight = copyBox.AbsoluteSize.Y
+        local frameHeight = bottomScroll.AbsoluteSize.Y
+        local canvasY = math.max(contentHeight + 4, frameHeight + 1)
+        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
     copyBox:GetPropertyChangedSignal("Text"):Connect(function()
+        updateBottomCanvas()
+    end)
+
+    bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         updateBottomCanvas()
     end)
 
@@ -493,8 +531,8 @@ local function createPlaytimeDebugWindow()
                                 "[State] Tier=%s Text=%s Claimed.Visible=%s Active=%s",
                                 info.Tier,
                                 text,
-                                tostring(claimedVisible)
-                                , tostring(btn.Active)
+                                tostring(claimedVisible),
+                                tostring(btn.Active)
                             )
                             appendLine(line)
                         end
