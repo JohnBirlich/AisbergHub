@@ -464,7 +464,7 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Логика сканирования Race2 чекпоинтов (CFrame)
+    -- Логика: DownforceF касается чекпоинтов Race2
     --------------------------------------------------
 
     local running = false
@@ -484,7 +484,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- x,y,z, R00..R22[web:563][web:565]
+        r20, r21, r22 = cf:GetComponents() -- x,y,z, R00..R22[web:574][web:580]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -516,78 +516,81 @@ local function createPlaytimeDebugWindow()
         disconnectAll()
 
         local ok, err = pcall(function()
-            -- Workspace > Races > Race2 > Race > Race2_уникальный код > checkpoint > part 1..70 + Finish
+            -- Workspace > Races > Race2 > Races > Race2_unique code (+Checkpoint IntValue и Parts)
             local races = Workspace:WaitForChild("Races")
             local race2Root = races:WaitForChild("Race2")
+            local race2Races = race2Root:WaitForChild("Races")
 
-            local function bindCheckpointFolder(checkpointFolder)
-                appendLine("[Info] Using checkpoint folder: " .. checkpointFolder:GetFullName())
+            local checkpointsByPart = {}
+            local checkpointsReady = false
 
-                for _, part in ipairs(checkpointFolder:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        local idx = tonumber(part.Name)
-                        local isFinish = (part.Name == "Finish")
+            local function scanRaceInstance(instance)
+                if not instance:IsA("Folder") and not instance:IsA("Model") then return end
+                if instance.Name:sub(1, 5) ~= "Race2" then return end
+
+                local checkpointValue = instance:FindFirstChild("Checkpoint")
+                    or instance:FindFirstChildWhichIsA("IntValue")
+                if not checkpointValue then
+                    appendLine("[Warn] Checkpoint IntValue not found in " .. instance.Name)
+                    return
+                end
+
+                for _, child in ipairs(instance:GetChildren()) do
+                    if child:IsA("BasePart") then
+                        local idx = tonumber(child.Name)
+                        local isFinish = (child.Name == "Finish")
                         if (idx and idx >= 1 and idx <= 70) or isFinish then
                             local labelIndex = isFinish and 999 or idx
+                            checkpointsByPart[child] = labelIndex
                             appendLine(string.format(
-                                "[Bind] %s (index=%s) -> .Touched",
-                                part.Name,
-                                tostring(labelIndex)
+                                "[Bind] %s (index=%s) from %s",
+                                child.Name,
+                                tostring(labelIndex),
+                                instance.Name
                             ))
-
-                            local conn = part.Touched:Connect(function(hit)
-                                if not running then return end
-                                local char = LocalPlayer.Character
-                                if not char then return end
-                                if not hit:IsDescendantOf(char) then return end
-
-                                if touchedOnce[part] then return end
-                                touchedOnce[part] = true
-
-                                local line = formatCFrameLine(labelIndex, part.CFrame)
-                                appendLine(line)
-                            end)
-                            table.insert(connections, conn)
                         end
                     end
                 end
             end
 
-            local function hookRaceFolder(raceFolder)
-                local function setupRaceInstance(instance)
-                    if instance:IsA("Folder") and instance.Name:sub(1, 5) == "Race2" then
-                        local checkpointFolder = instance:FindFirstChild("checkpoint")
-                            or instance:WaitForChild("checkpoint", 5)
-                        if checkpointFolder then
-                            bindCheckpointFolder(checkpointFolder)
-                        else
-                            appendLine("[Warn] checkpoint folder not found in " .. instance.Name)
-                        end
-                    end
-                end
-
-                for _, child in ipairs(raceFolder:GetChildren()) do
-                    setupRaceInstance(child)
-                end
-
-                local c = raceFolder.ChildAdded:Connect(function(child)
-                    setupRaceInstance(child)
-                end)
-                table.insert(connections, c)
+            for _, inst in ipairs(race2Races:GetChildren()) do
+                scanRaceInstance(inst)
             end
 
-            for _, child in ipairs(race2Root:GetChildren()) do
-                if child:IsA("Folder") and child.Name == "Race" then
-                    hookRaceFolder(child)
-                end
-            end
-
-            local raceChildConn = race2Root.ChildAdded:Connect(function(child)
-                if child:IsA("Folder") and child.Name == "Race" then
-                    hookRaceFolder(child)
-                end
+            local raceChildConn = race2Races.ChildAdded:Connect(function(inst)
+                scanRaceInstance(inst)
             end)
             table.insert(connections, raceChildConn)
+
+            checkpointsReady = true
+
+            -- Workspace > bonitoscocos's Car > Body > DownforceF
+            local carModel = Workspace:WaitForChild(LocalPlayer.Name .. "'s Car")
+            local bodyModel = carModel:WaitForChild("Body")
+            local downforce = bodyModel:WaitForChild("DownforceF")
+
+            appendLine("[Info] Using DownforceF: " .. downforce:GetFullName())
+
+            downforce.CanTouch = true -- чтобы Touched / GetTouchingParts работали стабильно[web:564]
+
+            local function onDownforceTouched(_hit)
+                if not running or not checkpointsReady then return end
+
+                local touching = downforce:GetTouchingParts() -- все части, с которыми сейчас соприкасается[web:573][web:577]
+                for _, p in ipairs(touching) do
+                    local idx = checkpointsByPart[p]
+                    if idx then
+                        if not touchedOnce[p] then
+                            touchedOnce[p] = true
+                            local line = formatCFrameLine(idx, p.CFrame)
+                            appendLine(line)
+                        end
+                    end
+                end
+            end
+
+            local conn = downforce.Touched:Connect(onDownforceTouched)
+            table.insert(connections, conn)
         end)
 
         if not ok then
