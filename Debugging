@@ -312,9 +312,26 @@ local function createPlaytimeDebugWindow()
     logLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
     logLabel.Parent = topScroll
 
+    -- FIX: дождаться, пока фрейм реально получит размер, иначе AbsoluteSize = 0[web:627][web:629]
+    task.spawn(function()
+        while topScroll.AbsoluteSize.Y == 0 do
+            task.wait()
+        end
+        while logLabel.AbsoluteSize.Y == 0 do
+            task.wait()
+        end
+        -- начальный пересчёт
+        local contentHeight = logLabel.AbsoluteSize.Y
+        local frameHeight = topScroll.AbsoluteSize.Y
+        topScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight + 8, frameHeight))
+    end)
+
     local function updateTopCanvas()
         local contentHeight = logLabel.AbsoluteSize.Y
         local frameHeight = topScroll.AbsoluteSize.Y
+        if frameHeight <= 0 then
+            return
+        end
         local canvasY = math.max(contentHeight + 8, frameHeight)
         topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
@@ -398,9 +415,24 @@ local function createPlaytimeDebugWindow()
     copyBox.Text = ""
     copyBox.Parent = bottomScroll
 
+    task.spawn(function()
+        while bottomScroll.AbsoluteSize.Y == 0 do
+            task.wait()
+        end
+        while copyBox.AbsoluteSize.Y == 0 do
+            task.wait()
+        end
+        local contentHeight = copyBox.AbsoluteSize.Y
+        local frameHeight = bottomScroll.AbsoluteSize.Y
+        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight + 8, frameHeight))
+    end)
+
     local function updateBottomCanvas()
         local contentHeight = copyBox.AbsoluteSize.Y
         local frameHeight = bottomScroll.AbsoluteSize.Y
+        if frameHeight <= 0 then
+            return
+        end
         local canvasY = math.max(contentHeight + 8, frameHeight)
         bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
@@ -465,7 +497,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..р22[web:563][web:574][web:565]
+        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:563][web:574][web:565]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
