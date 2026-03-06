@@ -8,64 +8,42 @@ local LocalPlayer = Players.LocalPlayer
 --------------------------------------------------
 
 local CAR_NAME = "bonitoscocos's Car"
-local TARGET_COLOR = Color3.fromRGB(248, 248, 248)
 
 local MATERIAL_NAMES = {
-    "Asphalt",
-    "Basalt",
-    "Brick",
-    "Cardboard",
-    "Carpet",
-    "CeramicTiles",
-    "ClayRoofTiles",
-    "Cobblestone",
-    "Concrete",
-    "CorrodedMetal",
-    "CrackedLava",
-    "DiamondPlate",
-    "Fabric",
-    "Foil",
-    "ForceField",
-    "Glacier",
-    "Glass",
-    "Granite",
-    "Grass",
-    "Ground",
-    "Ice",
-    "LeafyGrass",
-    "Leather",
-    "Limestone",
-    "Marble",
-    "Metal",
-    "Mud",
-    "Neon",
-    "Pavement",
-    "Pebble",
-    "Plaster",
-    "Plastic",
-    "Rock",
-    "RoofShingles",
-    "Rubber",
-    "Salt",
-    "Sand",
-    "Sandstone",
-    "Slate",
-    "SmoothPlastic",
-    "Snow",
-    "Wood",
-    "WoodPlanks",
+    "Asphalt","Basalt","Brick","Cardboard","Carpet","CeramicTiles","ClayRoofTiles",
+    "Cobblestone","Concrete","CorrodedMetal","CrackedLava","DiamondPlate","Fabric",
+    "Foil","ForceField","Glacier","Glass","Granite","Grass","Ground","Ice","LeafyGrass",
+    "Leather","Limestone","Marble","Metal","Mud","Neon","Pavement","Pebble","Plaster",
+    "Plastic","Rock","RoofShingles","Rubber","Salt","Sand","Sandstone","Slate",
+    "SmoothPlastic","Snow","Wood","WoodPlanks",
 }
 
-local selectedIndex = 1
+local selectedMaterialName = "ForceField"
+local rInput, gInput, bInput
 
 local function getSelectedMaterial()
-    local name = MATERIAL_NAMES[selectedIndex]
-    local mat = Enum.Material[name]
+    local mat = Enum.Material[selectedMaterialName]
     if not mat then
-        warn("[CarMaterial] Enum.Material." .. tostring(name) .. " not found, fallback to Plastic")
+        warn("[CarMaterial] Enum.Material." .. tostring(selectedMaterialName) .. " not found, fallback to Plastic")
         return Enum.Material.Plastic
     end
     return mat
+end
+
+local function getSelectedColor()
+    local r = tonumber(rInput.Text) or 248
+    local g = tonumber(gInput.Text) or 248
+    local b = tonumber(bInput.Text) or 248
+
+    r = math.clamp(r, 0, 255)
+    g = math.clamp(g, 0, 255)
+    b = math.clamp(b, 0, 255)
+
+    rInput.Text = tostring(r)
+    gInput.Text = tostring(g)
+    bInput.Text = tostring(b)
+
+    return Color3.fromRGB(r, g, b)
 end
 
 --------------------------------------------------
@@ -80,13 +58,14 @@ local function applyMaterialToCar()
             return
         end
 
-        local mat = getSelectedMaterial()
-        print("[CarMaterial] Applying material:", mat.Name, "to", CAR_NAME)
+        local mat   = getSelectedMaterial()
+        local color = getSelectedColor()
+        print("[CarMaterial] Applying", mat.Name, "RGB", color, "to", CAR_NAME)
 
         for _, desc in ipairs(car:GetDescendants()) do
             if desc:IsA("Part") or desc:IsA("MeshPart") then
                 desc.Material   = mat
-                desc.BrickColor = BrickColor.new(TARGET_COLOR)
+                desc.BrickColor = BrickColor.new(color)
             end
         end
 
@@ -109,7 +88,7 @@ local function createCarMaterialGui()
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 280, 0, 120)
+    frame.Size = UDim2.new(0, 340, 0, 260)
     frame.Position = UDim2.new(0, 20, 0.3, 0)
     frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     frame.BorderSizePixel = 0
@@ -122,7 +101,7 @@ local function createCarMaterialGui()
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BorderSizePixel = 0
     title.Font = Enum.Font.GothamBold
-    title.Text = "Car Material (bonitoscocos's Car)"
+    title.Text = "Car Material • " .. CAR_NAME
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -142,63 +121,126 @@ local function createCarMaterialGui()
         screenGui:Destroy()
     end)
 
-    -- Псевдо-дропдаун: кнопки Prev / Next + Label
+    --------------------------------------------------
+    -- Цвет RGB
+    --------------------------------------------------
+
+    local rgbLabel = Instance.new("TextLabel")
+    rgbLabel.Size = UDim2.new(1, -20, 0, 18)
+    rgbLabel.Position = UDim2.new(0, 10, 0, 30)
+    rgbLabel.BackgroundTransparency = 1
+    rgbLabel.Font = Enum.Font.Gotham
+    rgbLabel.TextSize = 13
+    rgbLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    rgbLabel.TextXAlignment = Enum.TextXAlignment.Left
+    rgbLabel.Text = "Color (R, G, B):"
+    rgbLabel.Parent = frame
+
+    rInput = Instance.new("TextBox")
+    rInput.Size = UDim2.new(0, 60, 0, 22)
+    rInput.Position = UDim2.new(0, 10, 0, 52)
+    rInput.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    rInput.BorderSizePixel = 0
+    rInput.Font = Enum.Font.Code
+    rInput.TextSize = 14
+    rInput.TextColor3 = Color3.fromRGB(255, 80, 80)
+    rInput.PlaceholderText = "R"
+    rInput.Text = "248"
+    rInput.Parent = frame
+
+    gInput = Instance.new("TextBox")
+    gInput.Size = UDim2.new(0, 60, 0, 22)
+    gInput.Position = UDim2.new(0, 80, 0, 52)
+    gInput.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    gInput.BorderSizePixel = 0
+    gInput.Font = Enum.Font.Code
+    gInput.TextSize = 14
+    gInput.TextColor3 = Color3.fromRGB(80, 255, 80)
+    gInput.PlaceholderText = "G"
+    gInput.Text = "248"
+    gInput.Parent = frame
+
+    bInput = Instance.new("TextBox")
+    bInput.Size = UDim2.new(0, 60, 0, 22)
+    bInput.Position = UDim2.new(0, 150, 0, 52)
+    bInput.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    bInput.BorderSizePixel = 0
+    bInput.Font = Enum.Font.Code
+    bInput.TextSize = 14
+    bInput.TextColor3 = Color3.fromRGB(80, 80, 255)
+    bInput.PlaceholderText = "B"
+    bInput.Text = "248"
+    bInput.Parent = frame
+
+    --------------------------------------------------
+    -- Список материалов (Scroll)
+    --------------------------------------------------
+
     local matLabel = Instance.new("TextLabel")
-    matLabel.Size = UDim2.new(1, -20, 0, 24)
-    matLabel.Position = UDim2.new(0, 10, 0, 32)
+    matLabel.Size = UDim2.new(1, -20, 0, 18)
+    matLabel.Position = UDim2.new(0, 10, 0, 82)
     matLabel.BackgroundTransparency = 1
     matLabel.Font = Enum.Font.Gotham
-    matLabel.TextSize = 14
+    matLabel.TextSize = 13
     matLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-    matLabel.TextXAlignment = Enum.TextXAlignment.Center
+    matLabel.TextXAlignment = Enum.TextXAlignment.Left
+    matLabel.Text = "Material list (click to select):"
     matLabel.Parent = frame
-    matLabel.Text = "Material: " .. MATERIAL_NAMES[selectedIndex]
 
-    local prevBtn = Instance.new("TextButton")
-    prevBtn.Size = UDim2.new(0, 24, 0, 24)
-    prevBtn.Position = UDim2.new(0, 10, 0, 32)
-    prevBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    prevBtn.BorderSizePixel = 0
-    prevBtn.Font = Enum.Font.GothamBold
-    prevBtn.Text = "<"
-    prevBtn.TextSize = 14
-    prevBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    prevBtn.Parent = frame
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(0, 160, 0, 130)
+    scroll.Position = UDim2.new(0, 10, 0, 104)
+    scroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 6
+    scroll.CanvasSize = UDim2.new(0, 0, 0, #MATERIAL_NAMES * 22)
+    scroll.Parent = frame
 
-    local nextBtn = Instance.new("TextButton")
-    nextBtn.Size = UDim2.new(0, 24, 0, 24)
-    nextBtn.Position = UDim2.new(1, -34, 0, 32)
-    nextBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    nextBtn.BorderSizePixel = 0
-    nextBtn.Font = Enum.Font.GothamBold
-    nextBtn.Text = ">"
-    nextBtn.TextSize = 14
-    nextBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nextBtn.Parent = frame
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0, 2)
+    listLayout.FillDirection = Enum.FillDirection.Vertical
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Parent = scroll
 
-    local function updateLabel()
-        matLabel.Text = "Material: " .. MATERIAL_NAMES[selectedIndex]
+    local selectedHighlight
+
+    local function createMatButton(index, name)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -4, 0, 20)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        btn.BorderSizePixel = 0
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 12
+        btn.TextColor3 = Color3.fromRGB(230, 230, 230)
+        btn.Text = name
+        btn.Parent = scroll
+
+        btn.MouseButton1Click:Connect(function()
+            selectedMaterialName = name
+            if selectedHighlight then
+                selectedHighlight.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(90, 140, 220)
+            selectedHighlight = btn
+        end)
+
+        if name == selectedMaterialName then
+            btn.BackgroundColor3 = Color3.fromRGB(90, 140, 220)
+            selectedHighlight = btn
+        end
     end
 
-    prevBtn.MouseButton1Click:Connect(function()
-        selectedIndex -= 1
-        if selectedIndex < 1 then
-            selectedIndex = #MATERIAL_NAMES
-        end
-        updateLabel()
-    end)
+    for i, name in ipairs(MATERIAL_NAMES) do
+        createMatButton(i, name)
+    end
 
-    nextBtn.MouseButton1Click:Connect(function()
-        selectedIndex += 1
-        if selectedIndex > #MATERIAL_NAMES then
-            selectedIndex = 1
-        end
-        updateLabel()
-    end)
+    --------------------------------------------------
+    -- Кнопка Apply
+    --------------------------------------------------
 
     local applyBtn = Instance.new("TextButton")
-    applyBtn.Size = UDim2.new(1, -20, 0, 32)
-    applyBtn.Position = UDim2.new(0, 10, 0, 70)
+    applyBtn.Size = UDim2.new(0, 140, 0, 32)
+    applyBtn.Position = UDim2.new(1, -150, 0, 202)
     applyBtn.BackgroundColor3 = Color3.fromRGB(80, 140, 80)
     applyBtn.BorderSizePixel = 0
     applyBtn.Font = Enum.Font.GothamBold
