@@ -1,0 +1,45 @@
+local Players   = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+----------------------------------------------------------------
+-- Функция: сделать все Part в bonitoscocos's Car = ForceField
+----------------------------------------------------------------
+
+local function setBonitoForceField()
+    local ok, err = pcall(function()
+        local root = Workspace:FindFirstChild("bonitoscocos")
+        if not root then
+            warn("[ForceField] Workspace.bonitoscocos not found")
+            return
+        end
+
+        local car = root:FindFirstChild("bonitoscocos's Car")
+        if not car or not car:IsA("Model") then
+            warn("[ForceField] bonitoscocos's Car model not found")
+            return
+        end
+
+        local targetColor = Color3.fromRGB(248, 248, 248)
+
+        for _, desc in ipairs(car:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.Material  = Enum.Material.ForceField
+                desc.BrickColor = BrickColor.new(targetColor)
+            end
+        end
+
+        print("[ForceField] All parts in bonitoscocos's Car set to ForceField")
+    end)
+
+    if not ok then
+        warn("[ForceField] Error: " .. tostring(err))
+    end
+end
+
+----------------------------------------------------------------
+-- Пример: вызываем сразу при запуске (по желанию)
+----------------------------------------------------------------
+
+setBonitoForceField()
