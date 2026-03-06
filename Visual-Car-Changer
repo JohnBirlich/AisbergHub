@@ -43,7 +43,7 @@ local function showWelcomeAndThen(callback)
     title.TextXAlignment = Enum.TextXAlignment.Center
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextTransparency = 1
-    title.Text = "WELCOME TO AISBERG HUB"
+    title.Text = "WELCOME TO AISBERG HUB!!"
     title.Parent = frame
 
     local desc = Instance.new("TextLabel")
@@ -56,7 +56,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Visuals • Color • Materials • by Dan"
+    desc.Text = "Midnight Chasers • Visuals • Colors • Materials • by Dan"
     desc.Parent = frame
 
     -- Fade in
