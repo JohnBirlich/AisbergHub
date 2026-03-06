@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country, фикс скролла) ===
+-- === AisbergHub Welcome (fade) + Race2 CFrame Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -6,6 +6,7 @@ local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local LocalizationService = game:GetService("LocalizationService")
+local Workspace = game:GetService("Workspace")
 
 --------------------------------------------------
 -- Welcome баннер
@@ -59,7 +60,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Playtime Rewards"
+    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Race2 CFrame Logger"
     desc.Parent = frame
 
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -83,12 +84,12 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Playtime Debug Window
+-- Race2 CFrame Debug Window
 --------------------------------------------------
 
 local function createPlaytimeDebugWindow()
     local debugGui = Instance.new("ScreenGui")
-    debugGui.Name = "AisbergHub_PlaytimeDebug"
+    debugGui.Name = "AisbergHub_Race2CFrameDebug"
     debugGui.ResetOnSpawn = false
     debugGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -99,12 +100,11 @@ local function createPlaytimeDebugWindow()
     main.BorderSizePixel = 0
     main.Parent = debugGui
 
-    -- минимальный размер = стартовый размер окна
     local minWidth  = main.Size.X.Offset
     local minHeight = main.Size.Y.Offset
 
     --------------------------------------------------
-    -- DRAG (отдельно)
+    -- DRAG
     --------------------------------------------------
 
     local dragging = false
@@ -128,7 +128,7 @@ local function createPlaytimeDebugWindow()
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BorderSizePixel = 0
     title.Font = Enum.Font.GothamBold
-    title.Text = "AisbergHub • Playtime Debug"
+    title.Text = "AisbergHub • Race2 CFrame Debug"
     title.TextSize = 14
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -168,19 +168,19 @@ local function createPlaytimeDebugWindow()
     end)
 
     local startBtn = Instance.new("TextButton")
-    startBtn.Size = UDim2.new(0, 150, 0, 30)
+    startBtn.Size = UDim2.new(0, 190, 0, 30)
     startBtn.Position = UDim2.new(0, 10, 0, 40)
     startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
     startBtn.BorderSizePixel = 0
     startBtn.Font = Enum.Font.GothamBold
-    startBtn.Text = "Start Playtime Debug"
+    startBtn.Text = "Start Race2 CFrame Debug"
     startBtn.TextSize = 14
     startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     startBtn.Parent = main
 
     local clearBtn = Instance.new("TextButton")
     clearBtn.Size = UDim2.new(0, 120, 0, 30)
-    clearBtn.Position = UDim2.new(0, 170, 0, 40)
+    clearBtn.Position = UDim2.new(0, 210, 0, 40)
     clearBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     clearBtn.BorderSizePixel = 0
     clearBtn.Font = Enum.Font.GothamBold
@@ -191,7 +191,7 @@ local function createPlaytimeDebugWindow()
 
     local copyBtn = Instance.new("TextButton")
     copyBtn.Size = UDim2.new(0, 140, 0, 30)
-    copyBtn.Position = UDim2.new(0, 300, 0, 40)
+    copyBtn.Position = UDim2.new(0, 340, 0, 40)
     copyBtn.BackgroundColor3 = Color3.fromRGB(80, 110, 160)
     copyBtn.BorderSizePixel = 0
     copyBtn.Font = Enum.Font.GothamBold
@@ -237,10 +237,10 @@ local function createPlaytimeDebugWindow()
         if lastUpdate >= 0.5 then
             local fps = math.floor(frameCount / lastUpdate + 0.5)
 
-            local kb = collectgarbage("count") -- KB[web:328]
+            local kb = collectgarbage("count")
             local mb = kb / 1024
 
-            local pingSec = LocalPlayer:GetNetworkPing() or 0 -- seconds[web:344]
+            local pingSec = LocalPlayer:GetNetworkPing() or 0
             local pingMs = math.floor(pingSec * 2000)
 
             statsLabel.Text = string.format(
@@ -424,7 +424,7 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- RESIZE (отдельно, позицию main не трогаем)
+    -- RESIZE
     --------------------------------------------------
 
     local resizeHandle = Instance.new("Frame")
@@ -464,97 +464,148 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Логика сканирования PlaytimeRewards
+    -- Логика сканирования Race2 чекпоинтов (CFrame)
     --------------------------------------------------
 
     local running = false
+    local connections = {}
+    local touchedOnce = {}
+
+    local function disconnectAll()
+        for _, conn in ipairs(connections) do
+            if conn.Connected then
+                conn:Disconnect()
+            end
+        end
+        table.clear(connections)
+    end
+
+    local function formatCFrameLine(idx, cf)
+        local x, y, z,
+        r00, r01, r02,
+        r10, r11, r12,
+        r20, r21, r22 = cf:GetComponents() -- x,y,z, R00..R22[web:563][web:565]
+
+        return string.format(
+            "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
+            idx,
+            tostring(x),
+            tostring(y),
+            tostring(z),
+            tostring(r00),
+            tostring(r01),
+            tostring(r02),
+            tostring(r10),
+            tostring(r11),
+            tostring(r12),
+            tostring(r20),
+            tostring(r21),
+            tostring(r22)
+        )
+    end
 
     local function startScanner()
         if running then return end
         running = true
-        startBtn.Text = "Stop Playtime Debug"
+        startBtn.Text = "Stop Race2 CFrame Debug"
         startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 
-        appendLine("[Start] Playtime debug started")
+        appendLine("[Start] Race2 CFrame debug started")
+
+        table.clear(touchedOnce)
+        disconnectAll()
 
         local ok, err = pcall(function()
-            local pg = LocalPlayer:WaitForChild("PlayerGui")
-            local mainUi = pg:WaitForChild("Main_User_Interface")
-            local rewardsRoot = mainUi:WaitForChild("Rewards")
-            local playtime = rewardsRoot:WaitForChild("PlaytimeRewards")
+            -- Workspace > Races > Race2 > Race > Race2_уникальный код > checkpoint > part 1..70 + Finish
+            local races = Workspace:WaitForChild("Races")
+            local race2Root = races:WaitForChild("Race2")
 
-            local rewardsFolder = playtime:FindFirstChild("Rewards") or playtime
+            local function bindCheckpointFolder(checkpointFolder)
+                appendLine("[Info] Using checkpoint folder: " .. checkpointFolder:GetFullName())
 
-            appendLine("[Info] Using folder: " .. rewardsFolder.Name)
+                for _, part in ipairs(checkpointFolder:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        local idx = tonumber(part.Name)
+                        local isFinish = (part.Name == "Finish")
+                        if (idx and idx >= 1 and idx <= 70) or isFinish then
+                            local labelIndex = isFinish and 999 or idx
+                            appendLine(string.format(
+                                "[Bind] %s (index=%s) -> .Touched",
+                                part.Name,
+                                tostring(labelIndex)
+                            ))
 
-            local rewardButtons = {}
+                            local conn = part.Touched:Connect(function(hit)
+                                if not running then return end
+                                local char = LocalPlayer.Character
+                                if not char then return end
+                                if not hit:IsDescendantOf(char) then return end
 
-            for _, tierFrame in ipairs(rewardsFolder:GetChildren()) do
-                if tierFrame:IsA("Frame") then
-                    local btn = tierFrame:FindFirstChild("Button")
-                    if btn and btn:IsA("GuiButton") then
-                        local txtLabel = btn:FindFirstChild("Frame") and btn.Frame:FindFirstChild("TextLabel")
-                        local claimedGui = btn:FindFirstChild("Claimed")
-                        table.insert(rewardButtons, {
-                            Tier    = tierFrame.Name,
-                            Button  = btn,
-                            Label   = txtLabel,
-                            Claimed = claimedGui
-                        })
-                        appendLine(string.format(
-                            "[Found] Tier=%s Label=%s HasClaimed=%s",
-                            tierFrame.Name,
-                            txtLabel and txtLabel.Text or "nil",
-                            tostring(claimedGui ~= nil)
-                        ))
-                    end
-                end
-            end
+                                if touchedOnce[part] then return end
+                                touchedOnce[part] = true
 
-            if #rewardButtons == 0 then
-                appendLine("[Warn] No reward buttons found")
-                return
-            end
-
-            task.spawn(function()
-                while running do
-                    task.wait(1)
-                    for _, info in ipairs(rewardButtons) do
-                        local btn     = info.Button
-                        local lbl     = info.Label
-                        local claimed = info.Claimed
-
-                        if btn and btn.Parent and btn.Parent.Visible and btn.Visible then
-                            local text = lbl and lbl.Text or "nil"
-                            local claimedVisible = claimed and claimed.Visible or false
-                            local line = string.format(
-                                "[State] Tier=%s Text=%s Claimed.Visible=%s Active=%s",
-                                info.Tier,
-                                text,
-                                tostring(claimedVisible),
-                                tostring(btn.Active)
-                            )
-                            appendLine(line)
+                                local line = formatCFrameLine(labelIndex, part.CFrame)
+                                appendLine(line)
+                            end)
+                            table.insert(connections, conn)
                         end
                     end
                 end
-                appendLine("[Stop] Playtime debug stopped")
+            end
+
+            local function hookRaceFolder(raceFolder)
+                local function setupRaceInstance(instance)
+                    if instance:IsA("Folder") and instance.Name:sub(1, 5) == "Race2" then
+                        local checkpointFolder = instance:FindFirstChild("checkpoint")
+                            or instance:WaitForChild("checkpoint", 5)
+                        if checkpointFolder then
+                            bindCheckpointFolder(checkpointFolder)
+                        else
+                            appendLine("[Warn] checkpoint folder not found in " .. instance.Name)
+                        end
+                    end
+                end
+
+                for _, child in ipairs(raceFolder:GetChildren()) do
+                    setupRaceInstance(child)
+                end
+
+                local c = raceFolder.ChildAdded:Connect(function(child)
+                    setupRaceInstance(child)
+                end)
+                table.insert(connections, c)
+            end
+
+            for _, child in ipairs(race2Root:GetChildren()) do
+                if child:IsA("Folder") and child.Name == "Race" then
+                    hookRaceFolder(child)
+                end
+            end
+
+            local raceChildConn = race2Root.ChildAdded:Connect(function(child)
+                if child:IsA("Folder") and child.Name == "Race" then
+                    hookRaceFolder(child)
+                end
             end)
+            table.insert(connections, raceChildConn)
         end)
 
         if not ok then
             appendLine("[Error] Init: " .. tostring(err))
             running = false
-            startBtn.Text = "Start Playtime Debug"
+            startBtn.Text = "Start Race2 CFrame Debug"
             startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+            disconnectAll()
         end
     end
 
     local function stopScanner()
         if not running then return end
         running = false
-        startBtn.Text = "Start Playtime Debug"
+        startBtn.Text = "Start Race2 CFrame Debug"
         startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+        appendLine("[Stop] Race2 CFrame debug stopped")
+        disconnectAll()
     end
 
     startBtn.MouseButton1Click:Connect(function()
