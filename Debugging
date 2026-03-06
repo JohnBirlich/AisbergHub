@@ -496,7 +496,7 @@ local function createPlaytimeDebugWindow()
         appendLine("[Start] Chekings CFrame dump")
 
         local ok, err = pcall(function()
-            -- Workspace > Chekings > Checkpoints > 1..70 / Finish
+            -- Workspace > Chekings > Checkpoints > 1..61 / Finish
             local chekings = Workspace:WaitForChild("Chekings")
             local checkpointsFolder = chekings:WaitForChild("Checkpoints")
 
