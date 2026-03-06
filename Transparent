@@ -4,8 +4,28 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
--- Функция: ForceField для всех Part в машине
+-- Отладка: вывести всех детей bonitoscocos
 --------------------------------------------------
+
+local function debugListBonitoChildren()
+    local root = Workspace:FindFirstChild("bonitoscocos")
+    if not root then
+        warn("[ForceField] Workspace.bonitoscocos not found")
+        return
+    end
+
+    print("[ForceField] Children of Workspace.bonitoscocos:")
+    for _, child in ipairs(root:GetChildren()) do
+        print(" -", child.Name, "(" .. child.ClassName .. ")")
+    end
+end
+
+--------------------------------------------------
+-- ForceField для всех BasePart в машине
+--------------------------------------------------
+
+-- ВАЖНО: сюда поставь точное имя модели из вывода debugListBonitoChildren
+local CAR_NAME = "bonitoscocos's Car"  -- поменяй, если в игре имя другое
 
 local function setBonitoForceField()
     local ok, err = pcall(function()
@@ -15,9 +35,10 @@ local function setBonitoForceField()
             return
         end
 
-        local car = root:FindFirstChild("bonitoscocos's Car")
+        local car = root:FindFirstChild(CAR_NAME)
         if not car or not car:IsA("Model") then
-            warn("[ForceField] bonitoscocos's Car model not found")
+            warn("[ForceField] " .. CAR_NAME .. " model not found")
+            debugListBonitoChildren()
             return
         end
 
@@ -30,7 +51,7 @@ local function setBonitoForceField()
             end
         end
 
-        print("[ForceField] All BasePart in bonitoscocos's Car set to ForceField")
+        print("[ForceField] All BasePart in '" .. CAR_NAME .. "' set to ForceField")
     end)
 
     if not ok then
@@ -39,7 +60,7 @@ local function setBonitoForceField()
 end
 
 --------------------------------------------------
--- Простой GUI с одной кнопкой
+-- Простой GUI с кнопкой
 --------------------------------------------------
 
 local function createForceFieldGui()
@@ -49,7 +70,7 @@ local function createForceFieldGui()
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 260, 0, 80)
+    frame.Size = UDim2.new(0, 260, 0, 110)
     frame.Position = UDim2.new(0, 20, 0.3, 0)
     frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     frame.BorderSizePixel = 0
@@ -95,6 +116,21 @@ local function createForceFieldGui()
 
     ffBtn.MouseButton1Click:Connect(function()
         setBonitoForceField()
+    end)
+
+    local debugBtn = Instance.new("TextButton")
+    debugBtn.Size = UDim2.new(1, -20, 0, 30)
+    debugBtn.Position = UDim2.new(0, 10, 0, 75)
+    debugBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    debugBtn.BorderSizePixel = 0
+    debugBtn.Font = Enum.Font.GothamBold
+    debugBtn.Text = "Print bonitoscocos children"
+    debugBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    debugBtn.TextSize = 11
+    debugBtn.Parent = frame
+
+    debugBtn.MouseButton1Click:Connect(function()
+        debugListBonitoChildren()
     end)
 end
 
