@@ -1,8 +1,41 @@
 local Players      = game:GetService("Players")
-local Workspace    = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
+local RemoteEvent = ReplicatedStorage:WaitForChild("VisualCarChangerEvent")
+
+--------------------------------------------------
+-- Material list and color (ForceField default)
+--------------------------------------------------
+
+local MATERIAL_NAMES = {
+    "Asphalt","Basalt","Brick","Cardboard","Carpet","CeramicTiles","ClayRoofTiles",
+    "Cobblestone","Concrete","CorrodedMetal","CrackedLava","DiamondPlate","Fabric",
+    "Foil","ForceField","Glacier","Glass","Granite","Grass","Ground","Ice","LeafyGrass",
+    "Leather","Limestone","Marble","Metal","Mud","Neon","Pavement","Pebble","Plaster",
+    "Plastic","Rock","RoofShingles","Rubber","Salt","Sand","Sandstone","Slate",
+    "SmoothPlastic","Snow","Wood","WoodPlanks",
+}
+
+local selectedMaterialName = "ForceField"
+local rInput, gInput, bInput
+
+local function getSelectedColorNumbers()
+    local r = tonumber(rInput.Text) or 248
+    local g = tonumber(gInput.Text) or 248
+    local b = tonumber(bInput.Text) or 248
+
+    r = math.clamp(r, 0, 255)
+    g = math.clamp(g, 0, 255)
+    b = math.clamp(b, 0, 255)
+
+    rInput.Text = tostring(r)
+    gInput.Text = tostring(g)
+    bInput.Text = tostring(b)
+
+    return r, g, b
+end
 
 --------------------------------------------------
 -- Welcome logic
@@ -59,7 +92,6 @@ local function showWelcomeAndThen(callback)
     desc.Text = "Midnight Chasers • Visuals • Colors • Materials • by Dan"
     desc.Parent = frame
 
-    -- Fade in
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     TweenService:Create(frame,  inInfo, {BackgroundTransparency = 0.05}):Play()
     TweenService:Create(stroke, inInfo, {Transparency = 0}):Play()
@@ -69,7 +101,6 @@ local function showWelcomeAndThen(callback)
 
     task.wait(2.0)
 
-    -- Fade out
     local outInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     TweenService:Create(frame,  outInfo, {BackgroundTransparency = 1}):Play()
     TweenService:Create(stroke, outInfo, {Transparency = 1}):Play()
@@ -84,105 +115,7 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Material list and color (ForceField default)
---------------------------------------------------
-
-local MATERIAL_NAMES = {
-    "Asphalt","Basalt","Brick","Cardboard","Carpet","CeramicTiles","ClayRoofTiles",
-    "Cobblestone","Concrete","CorrodedMetal","CrackedLava","DiamondPlate","Fabric",
-    "Foil","ForceField","Glacier","Glass","Granite","Grass","Ground","Ice","LeafyGrass",
-    "Leather","Limestone","Marble","Metal","Mud","Neon","Pavement","Pebble","Plaster",
-    "Plastic","Rock","RoofShingles","Rubber","Salt","Sand","Sandstone","Slate",
-    "SmoothPlastic","Snow","Wood","WoodPlanks",
-}
-
-local selectedMaterialName = "ForceField"
-local rInput, gInput, bInput
-
-local function getSelectedMaterial()
-    local mat = Enum.Material[selectedMaterialName]
-    if not mat then
-        warn("[VisualCarChanger] Enum.Material." .. tostring(selectedMaterialName) .. " not found, falling back to Plastic")
-        return Enum.Material.Plastic
-    end
-    return mat
-end
-
-local function getSelectedColor()
-    local r = tonumber(rInput.Text) or 248
-    local g = tonumber(gInput.Text) or 248
-    local b = tonumber(bInput.Text) or 248
-
-    r = math.clamp(r, 0, 255)
-    g = math.clamp(g, 0, 255)
-    b = math.clamp(b, 0, 255)
-
-    rInput.Text = tostring(r)
-    gInput.Text = tostring(g)
-    bInput.Text = tostring(b)
-
-    return Color3.fromRGB(r, g, b)
-end
-
---------------------------------------------------
--- Find current player's car
---------------------------------------------------
-
-local function getPlayerCarModel()
-    local char = LocalPlayer.Character
-    if not char then
-        warn("[VisualCarChanger] No character")
-        return nil
-    end
-
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum or not hum.SeatPart then
-        warn("[VisualCarChanger] Player is not in a seat/vehicle")
-        return nil
-    end
-
-    local seat = hum.SeatPart
-    local car = seat:FindFirstAncestorOfClass("Model")
-    if not car then
-        warn("[VisualCarChanger] Vehicle model not found from seat")
-        return nil
-    end
-
-    return car
-end
-
---------------------------------------------------
--- Apply material and color to car
---------------------------------------------------
-
-local function applyMaterialToCar()
-    local ok, err = pcall(function()
-        local car = getPlayerCarModel()
-        if not car then
-            return
-        end
-
-        local mat   = getSelectedMaterial()
-        local color = getSelectedColor()
-        print("[VisualCarChanger] Applying", mat.Name, "to", car:GetFullName(), "color", color)
-
-        for _, desc in ipairs(car:GetDescendants()) do
-            if desc:IsA("Part") or desc:IsA("MeshPart") then
-                desc.Material   = mat
-                desc.BrickColor = BrickColor.new(color)
-            end
-        end
-
-        print("[VisualCarChanger] Done for car:", car.Name)
-    end)
-
-    if not ok then
-        warn("[VisualCarChanger] Error: " .. tostring(err))
-    end
-end
-
---------------------------------------------------
--- GUI Visual Car Changer
+-- GUI Visual Car Changer (client)
 --------------------------------------------------
 
 local function createVisualCarChangerGui()
@@ -200,7 +133,6 @@ local function createVisualCarChangerGui()
     frame.Draggable = true
     frame.Parent = screenGui
 
-    -- Rounded corners for main menu
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(0, 8)
     mainCorner.Parent = frame
@@ -230,10 +162,7 @@ local function createVisualCarChangerGui()
         screenGui:Destroy()
     end)
 
-    --------------------------------------------------
     -- RGB input
-    --------------------------------------------------
-
     local rgbLabel = Instance.new("TextLabel")
     rgbLabel.Size = UDim2.new(1, -20, 0, 18)
     rgbLabel.Position = UDim2.new(0, 10, 0, 30)
@@ -281,10 +210,7 @@ local function createVisualCarChangerGui()
     bInput.Text = "248"
     bInput.Parent = frame
 
-    --------------------------------------------------
     -- Material list
-    --------------------------------------------------
-
     local matLabel = Instance.new("TextLabel")
     matLabel.Size = UDim2.new(1, -20, 0, 18)
     matLabel.Position = UDim2.new(0, 10, 0, 82)
@@ -343,10 +269,7 @@ local function createVisualCarChangerGui()
         createMatButton(name)
     end
 
-    --------------------------------------------------
     -- Apply button
-    --------------------------------------------------
-
     local applyBtn = Instance.new("TextButton")
     applyBtn.Size = UDim2.new(0, 140, 0, 32)
     applyBtn.Position = UDim2.new(1, -150, 0, 202)
@@ -363,7 +286,8 @@ local function createVisualCarChangerGui()
     applyCorner.Parent = applyBtn
 
     applyBtn.MouseButton1Click:Connect(function()
-        applyMaterialToCar()
+        local r, g, b = getSelectedColorNumbers()
+        RemoteEvent:FireServer(selectedMaterialName, r, g, b) -- client → server [web:699][web:703]
     end)
 end
 
