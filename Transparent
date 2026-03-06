@@ -4,29 +4,28 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
--- ForceField для всех BasePart в bonitoscocos's Car
+-- ForceField для всех Part / MeshPart в bonitoscocos's Car
 --------------------------------------------------
-
-local CAR_NAME = "bonitoscocos's Car"  -- точное имя модели в Workspace
 
 local function setBonitoForceField()
     local ok, err = pcall(function()
-        local car = Workspace:FindFirstChild(CAR_NAME)
+        -- строго одна модель в Workspace
+        local car = Workspace:FindFirstChild("bonitoscocos's Car")
         if not car or not car:IsA("Model") then
-            warn("[ForceField] Model '" .. CAR_NAME .. "' not found in Workspace")
+            warn("[ForceField] Model 'bonitoscocos's Car' not found in Workspace")
             return
         end
 
         local targetColor = Color3.fromRGB(248, 248, 248)
 
         for _, desc in ipairs(car:GetDescendants()) do
-            if desc:IsA("BasePart") then  -- Part, MeshPart, WedgePart и т.д.
+            if desc:IsA("Part") or desc:IsA("MeshPart") then
                 desc.Material   = Enum.Material.ForceField
                 desc.BrickColor = BrickColor.new(targetColor)
             end
         end
 
-        print("[ForceField] All BasePart in '" .. CAR_NAME .. "' set to ForceField")
+        print("[ForceField] All Part/MeshPart in 'bonitoscocos's Car' set to ForceField")
     end)
 
     if not ok then
@@ -35,7 +34,7 @@ local function setBonitoForceField()
 end
 
 --------------------------------------------------
--- Простой GUI с одной кнопкой
+-- Мини‑GUI с одной кнопкой
 --------------------------------------------------
 
 local function createForceFieldGui()
