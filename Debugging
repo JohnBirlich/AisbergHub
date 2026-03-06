@@ -255,7 +255,7 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Верхняя панель: OUTPUT (пропорционально окну)
+    -- Верхняя панель: OUTPUT
     --------------------------------------------------
 
     local topContainer = Instance.new("Frame")
@@ -321,6 +321,7 @@ local function createPlaytimeDebugWindow()
         local frameHeight = topScroll.AbsoluteSize.Y
         local canvasY = math.max(contentHeight + 4, frameHeight)
         topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
+        topScroll.CanvasPosition = Vector2.new(0, canvasY)
     end
 
     logLabel:GetPropertyChangedSignal("Text"):Connect(updateTopCanvas)
@@ -396,6 +397,7 @@ local function createPlaytimeDebugWindow()
         local frameHeight = bottomScroll.AbsoluteSize.Y
         local canvasY = math.max(contentHeight + 4, frameHeight)
         bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
+        bottomScroll.CanvasPosition = Vector2.new(0, canvasY)
     end
 
     copyBox:GetPropertyChangedSignal("Text"):Connect(updateBottomCanvas)
@@ -453,7 +455,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:574][web:630][web:565]
+        r20, r21, r22 = cf:GetComponents()
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -487,13 +489,14 @@ local function createPlaytimeDebugWindow()
         logLabel.Text = ""
     end)
 
-        local function dumpChekings()
+    local function dumpChekings()
         if dumping then return end
         dumping = true
         startBtn.Text = "Dumping..."
         startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 
         appendLine("[Start] Chekings CFrame dump")
+        appendLine("[Info] Looping 1..88 + Finish")
 
         local ok, err = pcall(function()
             -- Workspace > Chekings > Checkpoints > 1..88 / Finish
@@ -530,6 +533,11 @@ local function createPlaytimeDebugWindow()
         startBtn.Text = "Dump Chekings CFrames"
         startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
     end
+
+    startBtn.MouseButton1Click:Connect(function()
+        dumpChekings()
+    end)
+end
 
 --------------------------------------------------
 -- Старт
