@@ -8,6 +8,21 @@ local Workspace         = game:GetService("Workspace")
 local TweenService      = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+--------------------------------------------------
+-- DEBUG: скан всех RemoteEvent'ов
+--------------------------------------------------
+
+task.spawn(function()
+    task.wait(5) -- даём игре прогрузиться
+    print("=== RemoteEvent scan start ===")
+    for _, inst in ipairs(game:GetDescendants()) do
+        if inst:IsA("RemoteEvent") then
+            print("RemoteEvent:", inst:GetFullName())
+        end
+    end
+    print("=== RemoteEvent scan end ===")
+end)
+
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -36,7 +51,7 @@ screenGui.Parent = PlayerGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 260) -- высоту чуть увеличил под третий бутон
+mainFrame.Size = UDim2.new(0, 260, 0, 260) -- чуть увеличено под 3‑ю кнопку
 mainFrame.Position = UDim2.new(0, 20, 0.5, -130)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 0
@@ -343,7 +358,7 @@ local farmFrames = {
 --------------------------------------------------
 
 local race1Frames = {
-    -- (оставляю как в твоём коде; список большой, не менял)
+    -- твой большой список CFrame (оставь как есть)
     CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
     -- ...
     CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
@@ -622,85 +637,6 @@ race1Btn.MouseButton1Click:Connect(function()
             _G.raceGround = nil
         end
         print("[AisbergHub] Auto City Highway Race stopped (by button)")
-    end
-end)
-
---------------------------------------------------
--- Playtime Rewards Autofarm (RemoteEvent only)
---------------------------------------------------
-
-local function findPlaytimeRemote()
-    for _, inst in ipairs(ReplicatedStorage:GetDescendants()) do
-        if inst:IsA("RemoteEvent") and string.find(inst.Name, "ClaimPlaytimeReward") then
-            return inst
-        end
-    end
-    return nil
-end
-
-local playtimeRemote = findPlaytimeRemote()
-if not playtimeRemote then
-    warn("[AisbergHub] Playtime RemoteEvent with name containing 'ClaimPlaytimeReward' not found")
-else
-    print("[AisbergHub] Playtime RemoteEvent found:", playtimeRemote:GetFullName())
-end
-
-local playtimeTiers = {
-    "Tier1",
-    "Tier2",
-    "Tier3",
-    "Tier4",
-    "Tier5"
-}
-
-local playtimeAutoEnabled = false
-
-local playtimeBtn = Instance.new("TextButton")
-playtimeBtn.Size = UDim2.new(1, -20, 0, 30)
-playtimeBtn.Position = UDim2.new(0, 10, 0, 210)
-playtimeBtn.BackgroundColor3 = Color3.fromRGB(130, 90, 40)
-playtimeBtn.BorderSizePixel = 0
-playtimeBtn.Font = Enum.Font.GothamBold
-playtimeBtn.Text = "Start Playtime Rewards Autofarm"
-playtimeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-playtimeBtn.TextSize = 14
-playtimeBtn.Parent = mainFrame
-
-playtimeBtn.MouseButton1Click:Connect(function()
-    playtimeAutoEnabled = not playtimeAutoEnabled
-    if playtimeAutoEnabled then
-        playtimeBtn.Text = "Stop Playtime Rewards Autofarm"
-        print("[AisbergHub] Playtime Rewards Autofarm enabled")
-    else
-        playtimeBtn.Text = "Start Playtime Rewards Autofarm"
-        print("[AisbergHub] Playtime Rewards Autofarm disabled")
-    end
-end)
-
-task.spawn(function()
-    while task.wait(5) do
-        if not playtimeAutoEnabled then
-            continue
-        end
-        if not playtimeRemote then
-            playtimeRemote = findPlaytimeRemote()
-            if not playtimeRemote then
-                warn("[AisbergHub] Playtime RemoteEvent still not found")
-                continue
-            end
-        end
-
-        for _, tierName in ipairs(playtimeTiers) do
-            local ok, err = pcall(function()
-                playtimeRemote:FireServer(tierName)
-            end)
-            if not ok then
-                warn("[AisbergHub] Error firing Playtime Remote for", tierName, err)
-            else
-                print("[AisbergHub] Attempted claim for Playtime tier:", tierName)
-            end
-            task.wait(0.2)
-        end
     end
 end)
 
