@@ -11,13 +11,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 
-print("Welcome to AisbergHub. Thanks for using.")
+print("====================================================")
+print("  AisbergHub | Midnight Chasers Utilities Loaded")
+print("  Anti-AFK | Autofarm | Auto Races 🏁")
+print("  User:", LocalPlayer.Name, "| Display:", LocalPlayer.DisplayName)
+print("====================================================")
+
+warn("Anti AFK launching")
 
 --------------------------------------------------
 -- Anti AFK
 --------------------------------------------------
 
-warn("Anti AFK launching")
 LocalPlayer.Idled:Connect(function()
     warn("Anti AFK triggered, sending fake input")
     local vu = game:GetService("VirtualUser")
@@ -36,7 +41,7 @@ screenGui.Parent = PlayerGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 320) -- удлинил, чтобы все кнопки влезли
+mainFrame.Size = UDim2.new(0, 260, 0, 320)
 mainFrame.Position = UDim2.new(0, 20, 0.5, -160)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 0
@@ -343,7 +348,7 @@ local farmFrames = {
 --------------------------------------------------
 
 local race1Frames = {
-    -- твой полный список CFrame здесь
+    -- сюда вставь свой полный список CFrame
     CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
     -- ...
     CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
@@ -498,7 +503,7 @@ local function teleportToRace1Start()
 end
 
 --------------------------------------------------
--- Auto City Highway Race 🏁 (Race1)
+-- Auto City Highway Race 🏁
 --------------------------------------------------
 
 local function runRace1Route()
