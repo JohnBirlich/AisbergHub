@@ -487,7 +487,7 @@ local function createPlaytimeDebugWindow()
         logLabel.Text = ""
     end)
 
-    local function dumpChekings()
+        local function dumpChekings()
         if dumping then return end
         dumping = true
         startBtn.Text = "Dumping..."
@@ -496,11 +496,11 @@ local function createPlaytimeDebugWindow()
         appendLine("[Start] Chekings CFrame dump")
 
         local ok, err = pcall(function()
-            -- Workspace > Chekings > Checkpoints > 1..61 / Finish
+            -- Workspace > Chekings > Checkpoints > 1..88 / Finish
             local chekings = Workspace:WaitForChild("Chekings")
             local checkpointsFolder = chekings:WaitForChild("Checkpoints")
 
-            for i = 1, 90 do
+            for i = 1, 88 do
                 local name = tostring(i)
                 local part = checkpointsFolder:FindFirstChild(name)
                 if part and part:IsA("BasePart") then
@@ -530,11 +530,6 @@ local function createPlaytimeDebugWindow()
         startBtn.Text = "Dump Chekings CFrames"
         startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
     end
-
-    startBtn.MouseButton1Click:Connect(function()
-        dumpChekings()
-    end)
-end
 
 --------------------------------------------------
 -- Старт
