@@ -10,9 +10,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
--- модуль телепорта из игры
-local TeleportModule = require(ReplicatedStorage.Modules.Modules.Teleport)
-
 print("AisbergHub LocalScript loaded")
 
 --------------------------------------------------
@@ -458,9 +455,6 @@ local function createMainGui()
             local body = car:FindFirstChild("Body")
             local weight = body and body:FindFirstChild("#Weight")
             if not weight then
-                weight = body and body:FindFirstChild("Weight")
-            end
-            if not weight then
                 warn("[getCar] Body/#Weight not found")
                 return nil
             end
@@ -473,28 +467,6 @@ local function createMainGui()
             return nil
         end
         return result
-    end
-
-    --------------------------------------------------
-    -- Телепорт машины к старту Race1 через модуль
-    --------------------------------------------------
-
-    local function teleportCarToRace1Start()
-        local car = getCar()
-        if not car then
-            warn("[teleportCarToRace1Start] Car not found")
-            return
-        end
-
-        local startCF = CFrame.new(
-            3260.53076, -7.51575422, 1015.698,
-            -3.36170197e-05, -0.951051414, -0.309032798,
-            1, -3.36170197e-05, -5.31971455e-06,
-            -5.31971455e-06, -0.309032798, 0.951051414
-        )
-
-        -- модульный телепорт: player, carModel, cframe
-        TeleportModule.Teleport(LocalPlayer, car, startCF)
     end
 
     --------------------------------------------------
@@ -582,6 +554,31 @@ local function createMainGui()
     end
 
     --------------------------------------------------
+    -- Teleport к старту Race1
+    --------------------------------------------------
+
+    local function teleportToRace1Start()
+        local ok, err = pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[teleportToRace1Start] No HumanoidRootPart")
+                return
+            end
+
+            hrp.CFrame = CFrame.new(
+                3260.53076, -7.51575422, 1015.698,
+                -3.36170197e-05, -0.951051414, -0.309032798,
+                1, -3.36170197e-05, -5.31971455e-06,
+                -5.31971455e-06, -0.309032798, 0.951051414
+            )
+        end)
+        if not ok then
+            warn("[teleportToRace1Start] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
     -- Auto City Highway Race 🏁
     --------------------------------------------------
 
@@ -591,7 +588,7 @@ local function createMainGui()
             print("[AisbergHub] Auto City Highway Race loop started")
 
             while race1Running do
-                teleportCarToRace1Start()
+                teleportToRace1Start()
                 if not race1Running then break end
 
                 startSoloForRace("Race1")
@@ -629,7 +626,7 @@ local function createMainGui()
                 end
                 if not race1Running then break end
 
-                teleportCarToRace1Start()
+                teleportToRace1Start()
                 if not race1Running then break end
 
                 task.wait(3)
