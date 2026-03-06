@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Race2 CFrame Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country) ===
+-- === AisbergHub Welcome (fade) + Race2 CFrame Debug (DownforceF -> inner Parts of 1..70/Finish) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -484,7 +484,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:574][web:580]
+        r20, r21, r22 = cf:GetComponents() [web:563][web:574]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -504,6 +504,21 @@ local function createPlaytimeDebugWindow()
         )
     end
 
+    -- ищем, к какому контейнеру "1..70/Finish" принадлежит hitPart
+    local function resolveCheckpointIndexFromHit(hit, rootInstance)
+        local current = hit
+        while current and current ~= rootInstance do
+            local name = current.Name
+            local idx = tonumber(name)
+            local isFinish = (name == "Finish")
+            if (idx and idx >= 1 and idx <= 70) or isFinish then
+                return isFinish and 999 or idx, current
+            end
+            current = current.Parent
+        end
+        return nil, nil
+    end
+
     local function startScanner()
         if running then return end
         running = true
@@ -516,60 +531,30 @@ local function createPlaytimeDebugWindow()
         disconnectAll()
 
         local ok, err = pcall(function()
-            -- Workspace > Races > Race2 > Races > Race2_unique code > Checkpoint(IntValue)
-            -- и внутри этого экземпляра дети "1".."70"/"Finish", а ВНУТРИ них реальный Part[web:585][web:587]
+            -- Workspace > Races > Race2 > Races > Race2_unique code
             local races = Workspace:WaitForChild("Races")
             local race2Root = races:WaitForChild("Race2")
             local race2Races = race2Root:WaitForChild("Races")
 
-            local checkpointsByPart = {}
-            local checkpointsReady = false
+            -- будем хранить все Race2_* инстансы, чтобы потом по ним искать родителя
+            local raceInstances = {}
 
-            local function scanCheckpointContainer(container, labelIndex)
-                for _, desc in ipairs(container:GetDescendants()) do
-                    if desc:IsA("BasePart") then
-                        checkpointsByPart[desc] = labelIndex
-                        appendLine(string.format(
-                            "[BindInner] %s (index=%s) from %s",
-                            desc:GetFullName(),
-                            tostring(labelIndex),
-                            container.Name
-                        ))
-                    end
-                end
-            end
-
-            local function scanRaceInstance(instance)
+            local function registerRaceInstance(instance)
                 if not instance:IsA("Folder") and not instance:IsA("Model") then return end
                 if instance.Name:sub(1, 5) ~= "Race2" then return end
 
-                local checkpointValue = instance:FindFirstChild("Checkpoint")
-                    or instance:FindFirstChildWhichIsA("IntValue")
-                if not checkpointValue then
-                    appendLine("[Warn] Checkpoint IntValue not found in " .. instance.Name)
-                    return
-                end
-
-                for _, child in ipairs(instance:GetChildren()) do
-                    local idx = tonumber(child.Name)
-                    local isFinish = (child.Name == "Finish")
-                    if (idx and idx >= 1 and idx <= 70) or isFinish then
-                        local labelIndex = isFinish and 999 or idx
-                        scanCheckpointContainer(child, labelIndex)
-                    end
-                end
+                raceInstances[instance] = true
+                appendLine("[Info] Registered Race2 instance: " .. instance:GetFullName())
             end
 
             for _, inst in ipairs(race2Races:GetChildren()) do
-                scanRaceInstance(inst)
+                registerRaceInstance(inst)
             end
 
             local raceChildConn = race2Races.ChildAdded:Connect(function(inst)
-                scanRaceInstance(inst)
+                registerRaceInstance(inst)
             end)
             table.insert(connections, raceChildConn)
-
-            checkpointsReady = true
 
             -- Workspace > bonitoscocos's Car > Body > DownforceF
             local carModel = Workspace:WaitForChild(LocalPlayer.Name .. "'s Car")
@@ -578,20 +563,27 @@ local function createPlaytimeDebugWindow()
 
             appendLine("[Info] Using DownforceF: " .. downforce:GetFullName())
 
-            downforce.CanTouch = true -- для стабильной работы Touched/GetTouchingParts[web:564]
+            downforce.CanTouch = true -- чтобы Touched работал[web:595][web:597]
 
-            local function onDownforceTouched(_hit)
-                if not running or not checkpointsReady then return end
+            local function onDownforceTouched(hit)
+                if not running then return end
 
-                local touching = downforce:GetTouchingParts() -- все части, которых касается DownforceF[web:573][web:581]
-                for _, p in ipairs(touching) do
-                    local idx = checkpointsByPart[p]
-                    if idx then
-                        if not touchedOnce[p] then
-                            touchedOnce[p] = true
-                            local line = formatCFrameLine(idx, p.CFrame)
-                            appendLine(line)
+                -- небольшой лог, чтобы убедиться, что вообще что‑то ловим
+                appendLine("[Debug] DownforceF touched: " .. hit:GetFullName())
+
+                -- ищем, принадлежит ли hit одному из Race2_* инстансов и контейнеру 1..70/Finish
+                for raceInst in pairs(raceInstances) do
+                    if hit:IsDescendantOf(raceInst) then
+                        local idx, checkpointContainer = resolveCheckpointIndexFromHit(hit, raceInst)
+                        if idx then
+                            -- берём CFrame самого hit (внутреннего Part), а не контейнера
+                            if not touchedOnce[hit] then
+                                touchedOnce[hit] = true
+                                local line = formatCFrameLine(idx, hit.CFrame)
+                                appendLine(line)
+                            end
                         end
+                        break
                     end
                 end
             end
