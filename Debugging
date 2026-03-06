@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country, фикс скролла) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -292,7 +292,7 @@ local function createPlaytimeDebugWindow()
     topScroll.BorderSizePixel = 0
     topScroll.ScrollBarThickness = 6
     topScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-    topScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    topScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
     topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     topScroll.ScrollingEnabled = true
     topScroll.ClipsDescendants = true
@@ -315,7 +315,7 @@ local function createPlaytimeDebugWindow()
     local function updateTopCanvas()
         local contentHeight = logLabel.AbsoluteSize.Y
         local frameHeight = topScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 4, frameHeight + 1)
+        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
         topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
@@ -381,7 +381,7 @@ local function createPlaytimeDebugWindow()
     bottomScroll.BorderSizePixel = 0
     bottomScroll.ScrollBarThickness = 6
     bottomScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-    bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
     bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     bottomScroll.ScrollingEnabled = true
     bottomScroll.ClipsDescendants = true
@@ -407,7 +407,7 @@ local function createPlaytimeDebugWindow()
     local function updateBottomCanvas()
         local contentHeight = copyBox.AbsoluteSize.Y
         local frameHeight = bottomScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 4, frameHeight + 1)
+        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
         bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
