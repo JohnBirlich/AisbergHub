@@ -17,7 +17,83 @@ print("  Anti-AFK | Autofarm | Auto Races 🏁")
 print("  User:", LocalPlayer.Name, "| Display:", LocalPlayer.DisplayName)
 print("====================================================")
 
-warn("Anti AFK launching")
+print("Anti AFK launching")
+
+--------------------------------------------------
+-- Welcome баннер
+--------------------------------------------------
+
+local function showWelcomeAndThen(callback)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "AisbergHub_Welcome"
+    gui.ResetOnSpawn = false
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 420, 0, 80)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BorderSizePixel = 0
+    frame.BackgroundTransparency = 1
+    frame.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1.5
+    stroke.Color = Color3.fromRGB(90, 140, 255)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Transparency = 1
+    stroke.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 12, 0, 12)
+    title.Size = UDim2.new(1, -24, 0, 26)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 22
+    title.TextXAlignment = Enum.TextXAlignment.Center
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextTransparency = 1
+    title.Text = "WELCOME TO THE AISBERG HUB!"
+    title.Parent = frame
+
+    local desc = Instance.new("TextLabel")
+    desc.BackgroundTransparency = 1
+    desc.Position = UDim2.new(0, 12, 0, 40)
+    desc.Size = UDim2.new(1, -24, 0, 26)
+    desc.Font = Enum.Font.Gotham
+    desc.TextSize = 14
+    desc.TextWrapped = true
+    desc.TextXAlignment = Enum.TextXAlignment.Center
+    desc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    desc.TextTransparency = 1
+    desc.Text = "Midnight Chasers • Autofarm • User:", LocalPlayer.Name, "| Display:", LocalPlayer.DisplayName"
+    desc.Parent = frame
+
+    local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(frame,  inInfo, {BackgroundTransparency = 0.05}):Play()
+    TweenService:Create(stroke, inInfo, {Transparency = 0}):Play()
+    TweenService:Create(title,  inInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(desc,   inInfo, {TextTransparency = 0.1}):Play()
+    task.wait(0.45)
+
+    task.wait(2.0)
+
+    local outInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    TweenService:Create(frame,  outInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(stroke, outInfo, {Transparency = 1}):Play()
+    TweenService:Create(title,  outInfo, {TextTransparency = 1}):Play()
+    TweenService:Create(desc,   outInfo, {TextTransparency = 1}):Play()
+    task.wait(0.45)
+
+    gui:Destroy()
+    if callback then callback() end
+end
+
 
 --------------------------------------------------
 -- Anti AFK
