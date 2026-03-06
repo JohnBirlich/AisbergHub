@@ -1,5 +1,6 @@
-local Players   = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+local Players      = game:GetService("Players")
+local Workspace    = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -42,7 +43,7 @@ local function showWelcomeAndThen(callback)
     title.TextXAlignment = Enum.TextXAlignment.Center
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextTransparency = 1
-    title.Text = "WELCOME TO THE AISBERG HUB!"
+    title.Text = "WELCOME TO AISBERG HUB"
     title.Parent = frame
 
     local desc = Instance.new("TextLabel")
@@ -58,6 +59,7 @@ local function showWelcomeAndThen(callback)
     desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Future Races"
     desc.Parent = frame
 
+    -- Fade in
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     TweenService:Create(frame,  inInfo, {BackgroundTransparency = 0.05}):Play()
     TweenService:Create(stroke, inInfo, {Transparency = 0}):Play()
@@ -67,6 +69,7 @@ local function showWelcomeAndThen(callback)
 
     task.wait(2.0)
 
+    -- Fade out
     local outInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
     TweenService:Create(frame,  outInfo, {BackgroundTransparency = 1}):Play()
     TweenService:Create(stroke, outInfo, {Transparency = 1}):Play()
@@ -75,11 +78,13 @@ local function showWelcomeAndThen(callback)
     task.wait(0.45)
 
     gui:Destroy()
-    if callback then callback() end
+    if callback then
+        callback()
+    end
 end
 
 --------------------------------------------------
--- List of Materials and Color Logiv
+-- Список материалов и цвет (ForceField по умолчанию)
 --------------------------------------------------
 
 local MATERIAL_NAMES = {
@@ -120,7 +125,7 @@ local function getSelectedColor()
 end
 
 --------------------------------------------------
--- Search for players Car
+-- Поиск машины текущего игрока
 --------------------------------------------------
 
 local function getPlayerCarModel()
@@ -137,7 +142,6 @@ local function getPlayerCarModel()
     end
 
     local seat = hum.SeatPart
-    -- поднимаемся вверх до Model, которую считаем машиной
     local car = seat:FindFirstAncestorOfClass("Model")
     if not car then
         warn("[VisualCarChanger] Vehicle model not found from seat")
@@ -148,7 +152,7 @@ local function getPlayerCarModel()
 end
 
 --------------------------------------------------
--- Apply to car
+-- Применение материала/цвета к машине
 --------------------------------------------------
 
 local function applyMaterialToCar()
@@ -178,7 +182,7 @@ local function applyMaterialToCar()
 end
 
 --------------------------------------------------
--- GUI
+-- GUI Visual Car Changer
 --------------------------------------------------
 
 local function createVisualCarChangerGui()
@@ -222,7 +226,7 @@ local function createVisualCarChangerGui()
     end)
 
     --------------------------------------------------
-    -- RGB
+    -- RGB ввод
     --------------------------------------------------
 
     local rgbLabel = Instance.new("TextLabel")
@@ -273,7 +277,7 @@ local function createVisualCarChangerGui()
     bInput.Parent = frame
 
     --------------------------------------------------
-    -- Material List
+    -- Список материалов
     --------------------------------------------------
 
     local matLabel = Instance.new("TextLabel")
@@ -354,5 +358,8 @@ local function createVisualCarChangerGui()
     end)
 end
 
+--------------------------------------------------
+-- Старт
+--------------------------------------------------
 
-createVisualCarChangerGui()
+showWelcomeAndThen(createVisualCarChangerGui)
