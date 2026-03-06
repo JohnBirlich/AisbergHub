@@ -257,11 +257,11 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Верхняя панель: OUTPUT
+    -- Верхняя панель: OUTPUT (фиксированный размер + Canvas по строкам)
     --------------------------------------------------
 
     local topContainer = Instance.new("Frame")
-    topContainer.Size = UDim2.new(1, -20, 0.5, -80)
+    topContainer.Size = UDim2.new(1, -20, 0, 140)
     topContainer.Position = UDim2.new(0, 10, 0, 100)
     topContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     topContainer.BorderSizePixel = 0
@@ -293,9 +293,9 @@ local function createPlaytimeDebugWindow()
     topScroll.ScrollBarThickness = 6
     topScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
     topScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     topScroll.ScrollingEnabled = true
     topScroll.ClipsDescendants = true
+    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     topScroll.Parent = topContainer
 
     local logLabel = Instance.new("TextLabel")
@@ -312,48 +312,25 @@ local function createPlaytimeDebugWindow()
     logLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
     logLabel.Parent = topScroll
 
-    -- FIX: дождаться, пока фрейм реально получит размер, иначе AbsoluteSize = 0[web:627][web:629]
-    task.spawn(function()
-        while topScroll.AbsoluteSize.Y == 0 do
-            task.wait()
+    local function updateTopCanvasByLines()
+        local text = logLabel.Text
+        local lineCount = 1
+        if text ~= "" then
+            lineCount = select(2, text:gsub("\n", "\n")) + 1
         end
-        while logLabel.AbsoluteSize.Y == 0 do
-            task.wait()
-        end
-        -- начальный пересчёт
-        local contentHeight = logLabel.AbsoluteSize.Y
+        local lineHeight = 18
+        local contentHeight = lineCount * lineHeight
         local frameHeight = topScroll.AbsoluteSize.Y
-        topScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight + 8, frameHeight))
-    end)
-
-    local function updateTopCanvas()
-        local contentHeight = logLabel.AbsoluteSize.Y
-        local frameHeight = topScroll.AbsoluteSize.Y
-        if frameHeight <= 0 then
-            return
-        end
-        local canvasY = math.max(contentHeight + 8, frameHeight)
+        local canvasY = math.max(contentHeight + 4, frameHeight)
         topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
     logLabel:GetPropertyChangedSignal("Text"):Connect(function()
-        updateTopCanvas()
+        updateTopCanvasByLines()
     end)
 
     topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateTopCanvas()
-    end)
-
-    local function appendLine(text)
-        if logLabel.Text == "" then
-            logLabel.Text = text
-        else
-            logLabel.Text = logLabel.Text .. "\n" .. text
-        end
-    end
-
-    clearBtn.MouseButton1Click:Connect(function()
-        logLabel.Text = ""
+        updateTopCanvasByLines()
     end)
 
     --------------------------------------------------
@@ -361,8 +338,8 @@ local function createPlaytimeDebugWindow()
     --------------------------------------------------
 
     local bottomContainer = Instance.new("Frame")
-    bottomContainer.Size = UDim2.new(1, -20, 0.5, -40)
-    bottomContainer.Position = UDim2.new(0, 10, 0.5, 10)
+    bottomContainer.Size = UDim2.new(1, -20, 0, 140)
+    bottomContainer.Position = UDim2.new(0, 10, 0, 100 + 140 + 10)
     bottomContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     bottomContainer.BorderSizePixel = 0
     bottomContainer.Parent = main
@@ -393,9 +370,9 @@ local function createPlaytimeDebugWindow()
     bottomScroll.ScrollBarThickness = 6
     bottomScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
     bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     bottomScroll.ScrollingEnabled = true
     bottomScroll.ClipsDescendants = true
+    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
     bottomScroll.Parent = bottomContainer
 
     local copyBox = Instance.new("TextBox")
@@ -415,34 +392,25 @@ local function createPlaytimeDebugWindow()
     copyBox.Text = ""
     copyBox.Parent = bottomScroll
 
-    task.spawn(function()
-        while bottomScroll.AbsoluteSize.Y == 0 do
-            task.wait()
+    local function updateBottomCanvasByLines()
+        local text = copyBox.Text
+        local lineCount = 1
+        if text ~= "" then
+            lineCount = select(2, text:gsub("\n", "\n")) + 1
         end
-        while copyBox.AbsoluteSize.Y == 0 do
-            task.wait()
-        end
-        local contentHeight = copyBox.AbsoluteSize.Y
+        local lineHeight = 18
+        local contentHeight = lineCount * lineHeight
         local frameHeight = bottomScroll.AbsoluteSize.Y
-        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight + 8, frameHeight))
-    end)
-
-    local function updateBottomCanvas()
-        local contentHeight = copyBox.AbsoluteSize.Y
-        local frameHeight = bottomScroll.AbsoluteSize.Y
-        if frameHeight <= 0 then
-            return
-        end
-        local canvasY = math.max(contentHeight + 8, frameHeight)
+        local canvasY = math.max(contentHeight + 4, frameHeight)
         bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
     copyBox:GetPropertyChangedSignal("Text"):Connect(function()
-        updateBottomCanvas()
+        updateBottomCanvasByLines()
     end)
 
     bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateBottomCanvas()
+        updateBottomCanvasByLines()
     end)
 
     copyBtn.MouseButton1Click:Connect(function()
@@ -518,6 +486,18 @@ local function createPlaytimeDebugWindow()
     end
 
     local dumping = false
+
+    local function appendLine(text)
+        if logLabel.Text == "" then
+            logLabel.Text = text
+        else
+            logLabel.Text = logLabel.Text .. "\n" .. text
+        end
+    end
+
+    clearBtn.MouseButton1Click:Connect(function()
+        logLabel.Text = ""
+    end)
 
     local function dumpChekings()
         if dumping then return end
