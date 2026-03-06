@@ -10,6 +10,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- модуль телепорта из игры
+local TeleportModule = require(ReplicatedStorage.Modules.Modules.Teleport)
+
+print("AisbergHub LocalScript loaded")
+
 --------------------------------------------------
 -- Welcome баннер
 --------------------------------------------------
@@ -86,11 +91,15 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Основной GUI (создаём через welcome)
+-- Основной GUI (создаётся после welcome)
 --------------------------------------------------
 
 local function createMainGui()
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+    --------------------------------------------------
+    -- Anti AFK
+    --------------------------------------------------
 
     warn("Anti AFK launching")
     LocalPlayer.Idled:Connect(function()
@@ -99,6 +108,10 @@ local function createMainGui()
         vu:CaptureController()
         vu:ClickButton2(Vector2.new())
     end)
+
+    --------------------------------------------------
+    -- GUI
+    --------------------------------------------------
 
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MidnightChasersGui"
@@ -414,7 +427,7 @@ local function createMainGui()
     --------------------------------------------------
 
     local race1Frames = {
-        -- вставь сюда свой полный список CFrame
+        -- сюда вставь свой полный список CFrame для Race1
         CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
         -- ...
         CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
@@ -445,6 +458,9 @@ local function createMainGui()
             local body = car:FindFirstChild("Body")
             local weight = body and body:FindFirstChild("#Weight")
             if not weight then
+                weight = body and body:FindFirstChild("Weight")
+            end
+            if not weight then
                 warn("[getCar] Body/#Weight not found")
                 return nil
             end
@@ -457,6 +473,28 @@ local function createMainGui()
             return nil
         end
         return result
+    end
+
+    --------------------------------------------------
+    -- Телепорт машины к старту Race1 через модуль
+    --------------------------------------------------
+
+    local function teleportCarToRace1Start()
+        local car = getCar()
+        if not car then
+            warn("[teleportCarToRace1Start] Car not found")
+            return
+        end
+
+        local startCF = CFrame.new(
+            3260.53076, -7.51575422, 1015.698,
+            -3.36170197e-05, -0.951051414, -0.309032798,
+            1, -3.36170197e-05, -5.31971455e-06,
+            -5.31971455e-06, -0.309032798, 0.951051414
+        )
+
+        -- модульный телепорт: player, carModel, cframe
+        TeleportModule.Teleport(LocalPlayer, car, startCF)
     end
 
     --------------------------------------------------
@@ -544,31 +582,6 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Teleport к старту Race1
-    --------------------------------------------------
-
-    local function teleportToRace1Start()
-        local ok, err = pcall(function()
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then
-                warn("[teleportToRace1Start] No HumanoidRootPart")
-                return
-            end
-
-            hrp.CFrame = CFrame.new(
-                3260.53076, -7.51575422, 1015.698,
-                -3.36170197e-05, -0.951051414, -0.309032798,
-                1, -3.36170197e-05, -5.31971455e-06,
-                -5.31971455e-06, -0.309032798, 0.951051414
-            )
-        end)
-        if not ok then
-            warn("[teleportToRace1Start] Error:", err)
-        end
-    end
-
-    --------------------------------------------------
     -- Auto City Highway Race 🏁
     --------------------------------------------------
 
@@ -578,7 +591,7 @@ local function createMainGui()
             print("[AisbergHub] Auto City Highway Race loop started")
 
             while race1Running do
-                teleportToRace1Start()
+                teleportCarToRace1Start()
                 if not race1Running then break end
 
                 startSoloForRace("Race1")
@@ -616,7 +629,7 @@ local function createMainGui()
                 end
                 if not race1Running then break end
 
-                teleportToRace1Start()
+                teleportCarToRace1Start()
                 if not race1Running then break end
 
                 task.wait(3)
