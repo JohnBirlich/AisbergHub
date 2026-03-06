@@ -1,11 +1,14 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country, фикс скролла) ===
+-- Midnight Chasers GUI:
+-- Autofarm + Auto Races 🏁 + Anti AFK
+-- AisbergHub
 
-local Players = game:GetService("Players")
+local Players           = game:GetService("Players")
+local UIS               = game:GetService("UserInputService")
+local Workspace         = game:GetService("Workspace")
+local TweenService      = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local LocalPlayer = Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local LocalizationService = game:GetService("LocalizationService")
 
 --------------------------------------------------
 -- Welcome баннер
@@ -59,7 +62,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Playtime Rewards"
+    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Future Races"
     desc.Parent = frame
 
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -83,491 +86,760 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Playtime Debug Window
+-- Основной GUI (создаём через welcome)
 --------------------------------------------------
 
-local function createPlaytimeDebugWindow()
-    local debugGui = Instance.new("ScreenGui")
-    debugGui.Name = "AisbergHub_PlaytimeDebug"
-    debugGui.ResetOnSpawn = false
-    debugGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local function createMainGui()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-    local main = Instance.new("Frame")
-    main.Size = UDim2.new(0, 540, 0, 340)
-    main.Position = UDim2.new(0.5, -270, 0.2, 0)
-    main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    main.BorderSizePixel = 0
-    main.Parent = debugGui
+    warn("Anti AFK launching")
+    LocalPlayer.Idled:Connect(function()
+        warn("Anti AFK triggered, sending fake input")
+        local vu = game:GetService("VirtualUser")
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
+    end)
 
-    -- минимальный размер = стартовый размер окна
-    local minWidth  = main.Size.X.Offset
-    local minHeight = main.Size.Y.Offset
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MidnightChasersGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
 
-    --------------------------------------------------
-    -- DRAG (отдельно)
-    --------------------------------------------------
-
-    local dragging = false
-    local dragStartMouse
-    local dragStartPos
-
-    local function onDragInput(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStartMouse
-            main.Position = UDim2.new(
-                dragStartPos.X.Scale,
-                dragStartPos.X.Offset + delta.X,
-                dragStartPos.Y.Scale,
-                dragStartPos.Y.Offset + delta.Y
-            )
-        end
-    end
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 260, 0, 320)
+    mainFrame.Position = UDim2.new(0, 20, 0.5, -160)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = screenGui
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 30)
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BorderSizePixel = 0
     title.Font = Enum.Font.GothamBold
-    title.Text = "AisbergHub • Playtime Debug"
-    title.TextSize = 14
+    title.Text = "Midnight Chasers GUI"
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 16
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = main
-
-    title.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStartMouse = input.Position
-            dragStartPos = main.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    UIS.InputChanged:Connect(onDragInput)
-
-    --------------------------------------------------
-    -- Кнопки управления
-    --------------------------------------------------
+    title.Parent = mainFrame
 
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Name = "CloseButton"
+    closeBtn.Size = UDim2.new(0, 30, 1, 0)
     closeBtn.Position = UDim2.new(1, -30, 0, 0)
     closeBtn.BackgroundTransparency = 1
     closeBtn.Font = Enum.Font.GothamBold
     closeBtn.Text = "X"
-    closeBtn.TextSize = 16
+    closeBtn.TextSize = 18
     closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-    closeBtn.Parent = main
+    closeBtn.Parent = title
 
     closeBtn.MouseButton1Click:Connect(function()
-        debugGui:Destroy()
-    end)
-
-    local startBtn = Instance.new("TextButton")
-    startBtn.Size = UDim2.new(0, 150, 0, 30)
-    startBtn.Position = UDim2.new(0, 10, 0, 40)
-    startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-    startBtn.BorderSizePixel = 0
-    startBtn.Font = Enum.Font.GothamBold
-    startBtn.Text = "Start Playtime Debug"
-    startBtn.TextSize = 14
-    startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    startBtn.Parent = main
-
-    local clearBtn = Instance.new("TextButton")
-    clearBtn.Size = UDim2.new(0, 120, 0, 30)
-    clearBtn.Position = UDim2.new(0, 170, 0, 40)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    clearBtn.BorderSizePixel = 0
-    clearBtn.Font = Enum.Font.GothamBold
-    clearBtn.Text = "Clear Log"
-    clearBtn.TextSize = 14
-    clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    clearBtn.Parent = main
-
-    local copyBtn = Instance.new("TextButton")
-    copyBtn.Size = UDim2.new(0, 140, 0, 30)
-    copyBtn.Position = UDim2.new(0, 300, 0, 40)
-    copyBtn.BackgroundColor3 = Color3.fromRGB(80, 110, 160)
-    copyBtn.BorderSizePixel = 0
-    copyBtn.Font = Enum.Font.GothamBold
-    copyBtn.Text = "Copy to bottom"
-    copyBtn.TextSize = 14
-    copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copyBtn.Parent = main
-
-    --------------------------------------------------
-    -- FPS / Memory / Ping / Country статус-бар
-    --------------------------------------------------
-
-    local statsLabel = Instance.new("TextLabel")
-    statsLabel.Size = UDim2.new(1, -20, 0, 18)
-    statsLabel.Position = UDim2.new(0, 10, 0, 72)
-    statsLabel.BackgroundTransparency = 1
-    statsLabel.Font = Enum.Font.Code
-    statsLabel.TextSize = 13
-    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-    statsLabel.Text = "FPS: ...  |  LuaMem: ...  |  Ping: ... ms  |  Country: ..."
-    statsLabel.Parent = main
-
-    local lastUpdate = 0
-    local frameCount = 0
-    local cachedCountry = "..."
-
-    task.spawn(function()
-        local ok, region = pcall(function()
-            return LocalizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
-        end)
-        if ok and typeof(region) == "string" and region ~= "" then
-            cachedCountry = region
-        else
-            cachedCountry = "N/A"
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function(dt)
-        frameCount += 1
-        lastUpdate += dt
-
-        if lastUpdate >= 0.5 then
-            local fps = math.floor(frameCount / lastUpdate + 0.5)
-
-            local kb = collectgarbage("count") -- KB[web:328]
-            local mb = kb / 1024
-
-            local pingSec = LocalPlayer:GetNetworkPing() or 0 -- seconds[web:344]
-            local pingMs = math.floor(pingSec * 2000)
-
-            statsLabel.Text = string.format(
-                "FPS: %d  |  LuaMem: %.2f MB  |  Ping: %d ms  |  Country: %s",
-                fps,
-                mb,
-                pingMs,
-                cachedCountry
-            )
-
-            frameCount = 0
-            lastUpdate = 0
-        end
+        print("[AisbergHub] GUI closed")
+        screenGui:Destroy()
     end)
 
     --------------------------------------------------
-    -- Верхняя панель: OUTPUT
+    -- Remove NPCVehicles
     --------------------------------------------------
 
-    local topContainer = Instance.new("Frame")
-    topContainer.Size = UDim2.new(1, -20, 0.5, -80)
-    topContainer.Position = UDim2.new(0, 10, 0, 100)
-    topContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-    topContainer.BorderSizePixel = 0
-    topContainer.Parent = main
+    local removeBtn = Instance.new("TextButton")
+    removeBtn.Size = UDim2.new(1, -20, 0, 30)
+    removeBtn.Position = UDim2.new(0, 10, 0, 40)
+    removeBtn.BackgroundColor3 = Color3.fromRGB(170, 50, 50)
+    removeBtn.BorderSizePixel = 0
+    removeBtn.Font = Enum.Font.GothamBold
+    removeBtn.Text = "Remove NPC Vehicles"
+    removeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    removeBtn.TextSize = 14
+    removeBtn.Parent = mainFrame
 
-    local topTitle = Instance.new("TextLabel")
-    topTitle.Size = UDim2.new(1, -10, 0, 18)
-    topTitle.Position = UDim2.new(0, 5, 0, 2)
-    topTitle.BackgroundTransparency = 1
-    topTitle.Font = Enum.Font.GothamBold
-    topTitle.TextSize = 12
-    topTitle.TextXAlignment = Enum.TextXAlignment.Left
-    topTitle.TextColor3 = Color3.fromRGB(170, 170, 170)
-    topTitle.Text = "OUTPUT"
-    topTitle.Parent = topContainer
-
-    local topBorder = Instance.new("Frame")
-    topBorder.Size = UDim2.new(1, -10, 0, 1)
-    topBorder.Position = UDim2.new(0, 5, 0, 20)
-    topBorder.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    topBorder.BorderSizePixel = 0
-    topBorder.Parent = topContainer
-
-    local topScroll = Instance.new("ScrollingFrame")
-    topScroll.Size = UDim2.new(1, -10, 1, -26)
-    topScroll.Position = UDim2.new(0, 5, 0, 24)
-    topScroll.BackgroundTransparency = 1
-    topScroll.BorderSizePixel = 0
-    topScroll.ScrollBarThickness = 6
-    topScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-    topScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
-    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
-    topScroll.ScrollingEnabled = true
-    topScroll.ClipsDescendants = true
-    topScroll.Parent = topContainer
-
-    local logLabel = Instance.new("TextLabel")
-    logLabel.BackgroundTransparency = 1
-    logLabel.Size = UDim2.new(1, -4, 0, 0)
-    logLabel.Position = UDim2.new(0, 2, 0, 2)
-    logLabel.AutomaticSize = Enum.AutomaticSize.Y
-    logLabel.Font = Enum.Font.Code
-    logLabel.TextXAlignment = Enum.TextXAlignment.Left
-    logLabel.TextYAlignment = Enum.TextYAlignment.Top
-    logLabel.TextWrapped = true
-    logLabel.Text = ""
-    logLabel.TextSize = 14
-    logLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-    logLabel.Parent = topScroll
-
-    local function updateTopCanvas()
-        local contentHeight = logLabel.AbsoluteSize.Y
-        local frameHeight = topScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
-        topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
-    end
-
-    logLabel:GetPropertyChangedSignal("Text"):Connect(function()
-        updateTopCanvas()
-        task.defer(function()
-            topScroll.CanvasPosition = Vector2.new(
-                0,
-                math.max(topScroll.CanvasSize.Y.Offset - topScroll.AbsoluteSize.Y, 0)
-            )
-        end)
-    end)
-
-    topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateTopCanvas()
-    end)
-
-    local function appendLine(text)
-        if logLabel.Text == "" then
-            logLabel.Text = text
-        else
-            logLabel.Text = logLabel.Text .. "\n" .. text
-        end
-    end
-
-    clearBtn.MouseButton1Click:Connect(function()
-        logLabel.Text = ""
-    end)
-
-    --------------------------------------------------
-    -- Нижняя панель: COPY OUTPUT
-    --------------------------------------------------
-
-    local bottomContainer = Instance.new("Frame")
-    bottomContainer.Size = UDim2.new(1, -20, 0.5, -40)
-    bottomContainer.Position = UDim2.new(0, 10, 0.5, 10)
-    bottomContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
-    bottomContainer.BorderSizePixel = 0
-    bottomContainer.Parent = main
-
-    local bottomTitle = Instance.new("TextLabel")
-    bottomTitle.Size = UDim2.new(1, -10, 0, 18)
-    bottomTitle.Position = UDim2.new(0, 5, 0, 2)
-    bottomTitle.BackgroundTransparency = 1
-    bottomTitle.Font = Enum.Font.GothamBold
-    bottomTitle.TextSize = 12
-    bottomTitle.TextXAlignment = Enum.TextXAlignment.Left
-    bottomTitle.TextColor3 = Color3.fromRGB(170, 170, 170)
-    bottomTitle.Text = "COPY OUTPUT"
-    bottomTitle.Parent = bottomContainer
-
-    local bottomBorder = Instance.new("Frame")
-    bottomBorder.Size = UDim2.new(1, -10, 0, 1)
-    bottomBorder.Position = UDim2.new(0, 5, 0, 20)
-    bottomBorder.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    bottomBorder.BorderSizePixel = 0
-    bottomBorder.Parent = bottomContainer
-
-    local bottomScroll = Instance.new("ScrollingFrame")
-    bottomScroll.Size = UDim2.new(1, -10, 1, -26)
-    bottomScroll.Position = UDim2.new(0, 5, 0, 24)
-    bottomScroll.BackgroundTransparency = 1
-    bottomScroll.BorderSizePixel = 0
-    bottomScroll.ScrollBarThickness = 6
-    bottomScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-    bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
-    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
-    bottomScroll.ScrollingEnabled = true
-    bottomScroll.ClipsDescendants = true
-    bottomScroll.Parent = bottomContainer
-
-    local copyBox = Instance.new("TextBox")
-    copyBox.BackgroundTransparency = 1
-    copyBox.Size = UDim2.new(1, -4, 0, 0)
-    copyBox.Position = UDim2.new(0, 2, 0, 2)
-    copyBox.AutomaticSize = Enum.AutomaticSize.Y
-    copyBox.Font = Enum.Font.Code
-    copyBox.TextXAlignment = Enum.TextXAlignment.Left
-    copyBox.TextYAlignment = Enum.TextYAlignment.Top
-    copyBox.TextWrapped = true
-    copyBox.MultiLine = true
-    copyBox.ClearTextOnFocus = false
-    copyBox.TextEditable = true
-    copyBox.TextSize = 14
-    copyBox.TextColor3 = Color3.fromRGB(200, 255, 200)
-    copyBox.Text = ""
-    copyBox.Parent = bottomScroll
-
-    local function updateBottomCanvas()
-        local contentHeight = copyBox.AbsoluteSize.Y
-        local frameHeight = bottomScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
-        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
-    end
-
-    copyBox:GetPropertyChangedSignal("Text"):Connect(function()
-        updateBottomCanvas()
-    end)
-
-    bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateBottomCanvas()
-    end)
-
-    copyBtn.MouseButton1Click:Connect(function()
-        copyBox.Text = logLabel.Text
-    end)
-
-    --------------------------------------------------
-    -- RESIZE (отдельно, позицию main не трогаем)
-    --------------------------------------------------
-
-    local resizeHandle = Instance.new("Frame")
-    resizeHandle.Size = UDim2.new(0, 14, 0, 14)
-    resizeHandle.Position = UDim2.new(1, -14, 1, -14)
-    resizeHandle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    resizeHandle.BorderSizePixel = 0
-    resizeHandle.Parent = main
-
-    local resizing = false
-    local resizeStartMouse
-    local resizeStartSize
-
-    resizeHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = true
-            resizeStartMouse = UIS:GetMouseLocation()
-            resizeStartSize = main.Size
-        end
-    end)
-
-    resizeHandle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = false
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local current = UIS:GetMouseLocation()
-            local delta = current - resizeStartMouse
-
-            local newW = math.max(minWidth,  resizeStartSize.X.Offset + delta.X)
-            local newH = math.max(minHeight, resizeStartSize.Y.Offset + delta.Y)
-            main.Size = UDim2.new(0, newW, 0, newH)
-        end
-    end)
-
-    --------------------------------------------------
-    -- Логика сканирования PlaytimeRewards
-    --------------------------------------------------
-
-    local running = false
-
-    local function startScanner()
-        if running then return end
-        running = true
-        startBtn.Text = "Stop Playtime Debug"
-        startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
-
-        appendLine("[Start] Playtime debug started")
-
+    removeBtn.MouseButton1Click:Connect(function()
         local ok, err = pcall(function()
-            local pg = LocalPlayer:WaitForChild("PlayerGui")
-            local mainUi = pg:WaitForChild("Main_User_Interface")
-            local rewardsRoot = mainUi:WaitForChild("Rewards")
-            local playtime = rewardsRoot:WaitForChild("PlaytimeRewards")
+            local folder = Workspace:FindFirstChild("NPCVehicles")
+            if folder then
+                folder:Destroy()
+                print("[AisbergHub] NPC Vehicles removed")
+            else
+                print("[AisbergHub] NPC Vehicles folder not found")
+            end
+        end)
+        if not ok then
+            warn("[RemoveBtn] Error:", err)
+        end
+    end)
 
-            local rewardsFolder = playtime:FindFirstChild("Rewards") or playtime
+    --------------------------------------------------
+    -- Speed
+    --------------------------------------------------
 
-            appendLine("[Info] Using folder: " .. rewardsFolder.Name)
+    local speedLabel = Instance.new("TextLabel")
+    speedLabel.Size = UDim2.new(1, -20, 0, 20)
+    speedLabel.Position = UDim2.new(0, 10, 0, 80)
+    speedLabel.BackgroundTransparency = 1
+    speedLabel.Font = Enum.Font.GothamBold
+    speedLabel.Text = "Speed:"
+    speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedLabel.TextSize = 14
+    speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+    speedLabel.Parent = mainFrame
 
-            local rewardButtons = {}
+    local speedBox = Instance.new("TextBox")
+    speedBox.Name = "SpeedBox"
+    speedBox.Size = UDim2.new(1, -20, 0, 25)
+    speedBox.Position = UDim2.new(0, 10, 0, 105)
+    speedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    speedBox.BorderSizePixel = 0
+    speedBox.Font = Enum.Font.Gotham
+    speedBox.PlaceholderText = "200–350 норм"
+    speedBox.Text = "250"
+    speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedBox.TextSize = 14
+    speedBox.ClearTextOnFocus = false
+    speedBox.Parent = mainFrame
 
-            for _, tierFrame in ipairs(rewardsFolder:GetChildren()) do
-                if tierFrame:IsA("Frame") then
-                    local btn = tierFrame:FindFirstChild("Button")
-                    if btn and btn:IsA("GuiButton") then
-                        local txtLabel = btn:FindFirstChild("Frame") and btn.Frame:FindFirstChild("TextLabel")
-                        local claimedGui = btn:FindFirstChild("Claimed")
-                        table.insert(rewardButtons, {
-                            Tier    = tierFrame.Name,
-                            Button  = btn,
-                            Label   = txtLabel,
-                            Claimed = claimedGui
-                        })
-                        appendLine(string.format(
-                            "[Found] Tier=%s Label=%s HasClaimed=%s",
-                            tierFrame.Name,
-                            txtLabel and txtLabel.Text or "nil",
-                            tostring(claimedGui ~= nil)
-                        ))
-                    end
+    local function getSpeed()
+        local n = tonumber(speedBox.Text)
+        if not n or n <= 0 then
+            n = 250
+            speedBox.Text = "250"
+        end
+        return n
+    end
+
+    --------------------------------------------------
+    -- Очистка мира (для Autofarm)
+    --------------------------------------------------
+
+    local function hideWorkspaceObjects(plr)
+        local ok, err = pcall(function()
+            if not ReplicatedStorage:FindFirstChild("mrbackupfolder") then
+                local folder = Instance.new("Folder")
+                folder.Name = "mrbackupfolder"
+                folder.Parent = ReplicatedStorage
+            end
+            local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
+
+            local mustRemoveByName = {
+                Bush = true,
+                BeltPole = true,
+                Bridge = true,
+                BridgeAccent = true,
+                Curve = true,
+                GarageLamp = true,
+                Hangar = true,
+                HedgeTall = true,
+                MapBoard = true,
+                PortCraneOversized = true,
+                RailGuide = true
+            }
+
+            for _, v in pairs(Workspace:GetChildren()) do
+                local name = v.Name or ""
+                local isPlayerCar = string.find(name, plr.Name) or string.find(name, plr.DisplayName)
+
+                if v == Workspace.Terrain then
+                    continue
+                end
+
+                if mustRemoveByName[name] then
+                    v.Parent = backup
+                    continue
+                end
+
+                if (v:IsA("Model") or v:IsA("Folder") or v:IsA("MeshPart"))
+                    and not isPlayerCar
+                    and name ~= "" then
+                    v.Parent = backup
                 end
             end
+        end)
+        if not ok then
+            warn("[hideWorkspaceObjects] Error:", err)
+        end
+    end
 
-            if #rewardButtons == 0 then
-                appendLine("[Warn] No reward buttons found")
+    local function restoreWorkspaceObjects()
+        local ok, err = pcall(function()
+            local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
+            if backup then
+                for _, v in pairs(backup:GetChildren()) do
+                    v.Parent = Workspace
+                    task.wait()
+                end
+            end
+        end)
+        if not ok then
+            warn("[restoreWorkspaceObjects] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
+    -- Платформы
+    --------------------------------------------------
+
+    local function ensureFarmGround()
+        if not _G.farmGround then
+            local p = Instance.new("Part")
+            p.Name = "FarmGround"
+            p.Anchored = true
+            p.Size = Vector3.new(10000, 10, 10000)
+            p.Transparency = 0
+            p.CanCollide = true
+            p.Parent = Workspace
+            _G.farmGround = p
+        end
+    end
+
+    local function ensureRaceGround()
+        if not _G.raceGround then
+            local p = Instance.new("Part")
+            p.Name = "RaceGround"
+            p.Anchored = true
+            p.Size = Vector3.new(50, 10, 50)
+            p.Transparency = 1
+            p.CanCollide = true
+            p.Parent = Workspace
+            _G.raceGround = p
+        end
+    end
+
+    --------------------------------------------------
+    -- Твины
+    --------------------------------------------------
+
+    local currentTween
+
+    local function tweenFarm(car, targetCFrame, speed)
+        local ok, err = pcall(function()
+            ensureFarmGround()
+
+            local plr = LocalPlayer
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[tweenFarm] No HumanoidRootPart")
                 return
             end
 
-            task.spawn(function()
-                while running do
-                    task.wait(1)
-                    for _, info in ipairs(rewardButtons) do
-                        local btn     = info.Button
-                        local lbl     = info.Label
-                        local claimed = info.Claimed
+            local targetPos = targetCFrame.Position
+            local dist = (hrp.Position - targetPos).Magnitude
+            local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
 
-                        if btn and btn.Parent and btn.Parent.Visible and btn.Visible then
-                            local text = lbl and lbl.Text or "nil"
-                            local claimedVisible = claimed and claimed.Visible or false
-                            local line = string.format(
-                                "[State] Tier=%s Text=%s Claimed.Visible=%s Active=%s",
-                                info.Tier,
-                                text,
-                                tostring(claimedVisible),
-                                tostring(btn.Active)
-                            )
-                            appendLine(line)
-                        end
-                    end
-                end
-                appendLine("[Stop] Playtime debug stopped")
+            local cfValue = Instance.new("CFrameValue")
+            cfValue.Value = car:GetPrimaryPartCFrame()
+
+            cfValue.Changed:Connect(function()
+                local pos = cfValue.Value.Position
+                _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
+                car:PivotTo(CFrame.new(_G.farmGround.Position + Vector3.new(0, 7, 0), targetPos))
+                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
             end)
-        end)
 
+            if currentTween then
+                currentTween:Cancel()
+            end
+            currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
+            currentTween:Play()
+
+            repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
+
+            cfValue:Destroy()
+        end)
         if not ok then
-            appendLine("[Error] Init: " .. tostring(err))
-            running = false
-            startBtn.Text = "Start Playtime Debug"
-            startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+            warn("[tweenFarm] Error:", err)
         end
     end
 
-    local function stopScanner()
-        if not running then return end
-        running = false
-        startBtn.Text = "Start Playtime Debug"
-        startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+    local function tweenRace(car, targetCFrame, speed)
+        local ok, err = pcall(function()
+            ensureRaceGround()
+
+            local plr = LocalPlayer
+            local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[tweenRace] No HumanoidRootPart")
+                return
+            end
+
+            local targetPos = targetCFrame.Position
+            local dist = (hrp.Position - targetPos).Magnitude
+            local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
+
+            local cfValue = Instance.new("CFrameValue")
+            cfValue.Value = car:GetPrimaryPartCFrame()
+
+            cfValue.Changed:Connect(function()
+                local pos = cfValue.Value.Position
+                _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 2, pos.Z)
+                car:PivotTo(CFrame.new(Vector3.new(pos.X, targetPos.Y + 1, pos.Z), targetPos))
+                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+            end)
+
+            if currentTween then
+                currentTween:Cancel()
+            end
+            currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
+            currentTween:Play()
+
+            repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
+
+            cfValue:Destroy()
+        end)
+        if not ok then
+            warn("[tweenRace] Error:", err)
+        end
     end
 
-    startBtn.MouseButton1Click:Connect(function()
-        if running then
-            stopScanner()
+    --------------------------------------------------
+    -- Маршрут фарма
+    --------------------------------------------------
+
+    local farmFrames = {
+        CFrame.new(105.419128, -26.0098934, 7965.37988, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(2751.86499, -26.0098934, 3694.63354, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-8821.48438, -26.0098934, 2042.49939, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-6408.62109, -26.0098934, -727.765198, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-6099.79639, -26.00989345, -1027.94556, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-6066.70068, -26.0098934, 493.255524, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(132.786133, -26.0098934, 15.2286377, 3.35e-05, 0.951051414, -0.309032798, -1, 3.35e-05, -5.32e-06, 5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(-7692.85449, -26.0098934, -4668.61963, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414),
+        CFrame.new(4887.24609, -26.0098934, 1222.96826, -3.36e-05, 0.951051414, -0.309032798, -1, -3.36e-05, 5.32e-06, -5.32e-06, 0.309032798, 0.951051414)
+    }
+
+    --------------------------------------------------
+    -- City Highway Race (Race1) чекпоинты
+    --------------------------------------------------
+
+    local race1Frames = {
+        -- вставь сюда свой полный список CFrame
+        CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
+        -- ...
+        CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
+    }
+
+    --------------------------------------------------
+    -- Заготовки маршрутов Race2–Race4
+    --------------------------------------------------
+
+    local race2Frames = {}
+    local race3Frames = {}
+    local race4Frames = {}
+
+    --------------------------------------------------
+    -- Машина
+    --------------------------------------------------
+
+    local function getCar()
+        local ok, result = pcall(function()
+            local plr = LocalPlayer
+            local char = plr.Character
+            if not char then return nil end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local seat = hum and hum.SeatPart
+            if not seat then return nil end
+
+            local car = seat.Parent
+            local body = car:FindFirstChild("Body")
+            local weight = body and body:FindFirstChild("#Weight")
+            if not weight then
+                warn("[getCar] Body/#Weight not found")
+                return nil
+            end
+
+            car.PrimaryPart = weight
+            return car
+        end)
+        if not ok then
+            warn("[getCar] Error:", result)
+            return nil
+        end
+        return result
+    end
+
+    --------------------------------------------------
+    -- Флаги гонок
+    --------------------------------------------------
+
+    local autofarmRunning = false
+    local race1Running   = false
+    local race2Running   = false
+    local race3Running   = false
+    local race4Running   = false
+
+    --------------------------------------------------
+    -- Автофарм
+    --------------------------------------------------
+
+    local function runFarmRoute()
+        local ok, err = pcall(function()
+            autofarmRunning = true
+            print("[AisbergHub] Autofarm loop started")
+
+            local plr = LocalPlayer
+            hideWorkspaceObjects(plr)
+            ensureFarmGround()
+            task.wait()
+
+            while autofarmRunning do
+                local car = getCar()
+                if not car then
+                    task.wait(0.5)
+                else
+                    local speed = getSpeed()
+                    for _, cf in ipairs(farmFrames) do
+                        if not autofarmRunning then break end
+                        tweenFarm(car, cf, speed)
+                    end
+                end
+            end
+
+            if currentTween then
+                currentTween:Cancel()
+            end
+            restoreWorkspaceObjects()
+            print("[AisbergHub] Autofarm loop exited")
+        end)
+        if not ok then
+            warn("[runFarmRoute] Error:", err)
+            autofarmRunning = false
+        end
+    end
+
+    --------------------------------------------------
+    -- Общие функции для Races
+    --------------------------------------------------
+
+    local function getRaceByName(raceName)
+        local races = Workspace:FindFirstChild("Races")
+        if not races then return nil end
+        return races:FindFirstChild(raceName)
+    end
+
+    local function getRaceConfig(raceName)
+        local race = getRaceByName(raceName)
+        if not race then return nil end
+        return race:FindFirstChild("Config")
+    end
+
+    local function startSoloForRace(raceName)
+        local ok, err = pcall(function()
+            local config = getRaceConfig(raceName)
+            if not config then
+                warn("[startSoloForRace] No Config for", raceName)
+                return
+            end
+            local solo = config:FindFirstChild("Solo")
+            if solo and solo:IsA("BoolValue") then
+                solo.Value = true
+            else
+                warn("[startSoloForRace] Solo BoolValue not found for", raceName)
+            end
+        end)
+        if not ok then
+            warn("[startSoloForRace] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
+    -- Teleport к старту Race1
+    --------------------------------------------------
+
+    local function teleportToRace1Start()
+        local ok, err = pcall(function()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then
+                warn("[teleportToRace1Start] No HumanoidRootPart")
+                return
+            end
+
+            hrp.CFrame = CFrame.new(
+                3260.53076, -7.51575422, 1015.698,
+                -3.36170197e-05, -0.951051414, -0.309032798,
+                1, -3.36170197e-05, -5.31971455e-06,
+                -5.31971455e-06, -0.309032798, 0.951051414
+            )
+        end)
+        if not ok then
+            warn("[teleportToRace1Start] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
+    -- Auto City Highway Race 🏁
+    --------------------------------------------------
+
+    local function runRace1Route()
+        local ok, err = pcall(function()
+            race1Running = true
+            print("[AisbergHub] Auto City Highway Race loop started")
+
+            while race1Running do
+                teleportToRace1Start()
+                if not race1Running then break end
+
+                startSoloForRace("Race1")
+                if not race1Running then break end
+
+                task.wait(4)
+                if not race1Running then break end
+
+                local car
+                for i = 1, 60 do
+                    car = getCar()
+                    if car then break end
+                    task.wait(0.1)
+                    if not race1Running then break end
+                end
+                if not race1Running or not car then
+                    if not car then
+                        warn("[runRace1Route] Car not found, breaking loop")
+                    end
+                    break
+                end
+
+                local speed = getSpeed()
+
+                for idx, cf in ipairs(race1Frames) do
+                    if not race1Running then break end
+                    tweenRace(car, cf, speed)
+                    if idx == #race1Frames then
+                        break
+                    end
+                end
+
+                if currentTween then
+                    currentTween:Cancel()
+                end
+                if not race1Running then break end
+
+                teleportToRace1Start()
+                if not race1Running then break end
+
+                task.wait(3)
+                if not race1Running then break end
+
+                startSoloForRace("Race1")
+            end
+
+            if _G.raceGround then
+                _G.raceGround:Destroy()
+                _G.raceGround = nil
+            end
+
+            race1Running = false
+            print("[AisbergHub] Auto City Highway Race loop exited")
+        end)
+        if not ok then
+            warn("[runRace1Route] Error:", err)
+            race1Running = false
+            if _G.raceGround then
+                _G.raceGround:Destroy()
+                _G.raceGround = nil
+            end
+        end
+    end
+
+    --------------------------------------------------
+    -- Заглушки Race2–Race4
+    --------------------------------------------------
+
+    local function runRace2Route()
+        race2Running = true
+        print("[AisbergHub] Auto Rainbow Bridge Sprint loop (Race2) not implemented yet")
+        task.wait(1)
+        race2Running = false
+    end
+
+    local function runRace3Route()
+        race3Running = true
+        print("[AisbergHub] Auto Dojo Sprint loop (Race3) not implemented yet")
+        task.wait(1)
+        race3Running = false
+    end
+
+    local function runRace4Route()
+        race4Running = true
+        print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) not implemented yet")
+        task.wait(1)
+        race4Running = false
+    end
+
+    --------------------------------------------------
+    -- Кнопки
+    --------------------------------------------------
+
+    local autofarmBtn = Instance.new("TextButton")
+    autofarmBtn.Size = UDim2.new(1, -20, 0, 30)
+    autofarmBtn.Position = UDim2.new(0, 10, 0, 140)
+    autofarmBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+    autofarmBtn.BorderSizePixel = 0
+    autofarmBtn.Font = Enum.Font.GothamBold
+    autofarmBtn.Text = "Start Autofarm"
+    autofarmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    autofarmBtn.TextSize = 14
+    autofarmBtn.Parent = mainFrame
+
+    local race1Btn = Instance.new("TextButton")
+    race1Btn.Size = UDim2.new(1, -20, 0, 30)
+    race1Btn.Position = UDim2.new(0, 10, 0, 175)
+    race1Btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+    race1Btn.BorderSizePixel = 0
+    race1Btn.Font = Enum.Font.GothamBold
+    race1Btn.Text = "Auto City Highway Race 🏁"
+    race1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race1Btn.TextSize = 13
+    race1Btn.Parent = mainFrame
+
+    local race2Btn = Instance.new("TextButton")
+    race2Btn.Size = UDim2.new(1, -20, 0, 30)
+    race2Btn.Position = UDim2.new(0, 10, 0, 210)
+    race2Btn.BackgroundColor3 = Color3.fromRGB(80, 120, 150)
+    race2Btn.BorderSizePixel = 0
+    race2Btn.Font = Enum.Font.GothamBold
+    race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
+    race2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race2Btn.TextSize = 11
+    race2Btn.Parent = mainFrame
+
+    local race3Btn = Instance.new("TextButton")
+    race3Btn.Size = UDim2.new(1, -20, 0, 30)
+    race3Btn.Position = UDim2.new(0, 10, 0, 245)
+    race3Btn.BackgroundColor3 = Color3.fromRGB(80, 150, 120)
+    race3Btn.BorderSizePixel = 0
+    race3Btn.Font = Enum.Font.GothamBold
+    race3Btn.Text = "Auto Dojo Sprint 🏁"
+    race3Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race3Btn.TextSize = 12
+    race3Btn.Parent = mainFrame
+
+    local race4Btn = Instance.new("TextButton")
+    race4Btn.Size = UDim2.new(1, -20, 0, 30)
+    race4Btn.Position = UDim2.new(0, 10, 0, 280)
+    race4Btn.BackgroundColor3 = Color3.fromRGB(110, 80, 150)
+    race4Btn.BorderSizePixel = 0
+    race4Btn.Font = Enum.Font.GothamBold
+    race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
+    race4Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    race4Btn.TextSize = 9
+    race4Btn.Parent = mainFrame
+
+    autofarmBtn.MouseButton1Click:Connect(function()
+        if race1Running or race2Running or race3Running or race4Running then return end
+        if not autofarmRunning then
+            autofarmRunning = true
+            autofarmBtn.Text = "Stop Autofarm"
+            print("[AisbergHub] Autofarm started")
+            task.spawn(function()
+                runFarmRoute()
+                autofarmRunning = false
+                autofarmBtn.Text = "Start Autofarm"
+                print("[AisbergHub] Autofarm stopped")
+            end)
         else
-            startScanner()
+            autofarmRunning = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+            print("[AisbergHub] Autofarm stopped (by button)")
+        end
+    end)
+
+    race1Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race2Running or race3Running or race4Running then return end
+        if not race1Running then
+            race1Running = true
+            race1Btn.Text = "Stop City Highway Race 🏁"
+            print("[AisbergHub] Auto City Highway Race started")
+            task.spawn(function()
+                runRace1Route()
+                race1Btn.Text = "Auto City Highway Race 🏁"
+                print("[AisbergHub] Auto City Highway Race stopped")
+            end)
+        else
+            race1Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+            if _G.raceGround then
+                _G.raceGround:Destroy()
+                _G.raceGround = nil
+            end
+            print("[AisbergHub] Auto City Highway Race stopped (by button)")
+        end
+    end)
+
+    race2Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race1Running or race3Running or race4Running then return end
+        if not race2Running then
+            race2Running = true
+            race2Btn.Text = "Stop Rainbow Bridge Sprint 🏁"
+            task.spawn(function()
+                runRace2Route()
+                race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
+            end)
+        else
+            race2Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+        end
+    end)
+
+    race3Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race1Running or race2Running or race4Running then return end
+        if not race3Running then
+            race3Running = true
+            race3Btn.Text = "Stop Dojo Sprint 🏁"
+            task.spawn(function()
+                runRace3Route()
+                race3Btn.Text = "Auto Dojo Sprint 🏁"
+            end)
+        else
+            race3Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+        end
+    end)
+
+    race4Btn.MouseButton1Click:Connect(function()
+        if autofarmRunning or race1Running or race2Running or race3Running then return end
+        if not race4Running then
+            race4Running = true
+            race4Btn.Text = "Stop Rainbow Rinkai Dojo Sprint 🏁"
+            task.spawn(function()
+                runRace4Route()
+                race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
+            end)
+        else
+            race4Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
+        end
+    end)
+
+    --------------------------------------------------
+    -- Тоггл GUI на G
+    --------------------------------------------------
+
+    UIS.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.KeyCode == Enum.KeyCode.G then
+            if screenGui and screenGui.Parent then
+                screenGui.Enabled = not screenGui.Enabled
+                print("[AisbergHub] GUI toggled, Enabled =", screenGui.Enabled)
+            end
         end
     end)
 end
 
 --------------------------------------------------
--- Старт
+-- Запуск: сначала баннер, потом основной GUI
 --------------------------------------------------
 
-showWelcomeAndThen(createPlaytimeDebugWindow)
+showWelcomeAndThen(createMainGui)
