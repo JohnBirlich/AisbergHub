@@ -13,23 +13,17 @@ local LocalPlayer = Players.LocalPlayer
 print("AisbergHub LocalScript loaded")
 
 --------------------------------------------------
--- Загрузка TeleportVehicle (Shared)
+-- Константы Race1
 --------------------------------------------------
 
-local TeleportModule
-do
-    local ok, result = pcall(function()
-        local modulesRoot = ReplicatedStorage:WaitForChild("Modules")
-        local shared      = modulesRoot:WaitForChild("Shared")
-        return require(shared:WaitForChild("TeleportVehicle"))
-    end)
-    if ok then
-        TeleportModule = result
-        print("[AisbergHub] TeleportModule (TeleportVehicle) loaded")
-    else
-        warn("[AisbergHub] Failed to load TeleportModule:", result)
-    end
-end
+local RACE1_START_CF = CFrame.new(
+    3260.53076, -7.51575422, 1015.698,
+    -3.36170197e-05, -0.951051414, -0.309032798,
+    1, -3.36170197e-05, -5.31971455e-06,
+    -5.31971455e-06, -0.309032798, 0.951051414
+)
+
+local START_RADIUS = 30 -- радиус зоны старта
 
 --------------------------------------------------
 -- Welcome баннер
@@ -443,7 +437,7 @@ local function createMainGui()
     --------------------------------------------------
 
     local race1Frames = {
-        -- сюда вставь свой полный список CFrame для Race1
+        -- сюда твой полный список чекпоинтов Race1
         CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
         -- ...
         CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
@@ -458,7 +452,7 @@ local function createMainGui()
     local race4Frames = {}
 
     --------------------------------------------------
-    -- Машина
+    -- Машина + проверки
     --------------------------------------------------
 
     local function getCar()
@@ -488,30 +482,18 @@ local function createMainGui()
         return result
     end
 
-    --------------------------------------------------
-    -- Телепорт машины к старту Race1 через TeleportVehicle
-    --------------------------------------------------
+    local function isPlayerInCar()
+        local char = LocalPlayer.Character
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        return hum and hum.SeatPart ~= nil
+    end
 
-    local function teleportCarToRace1Start()
-        if not TeleportModule then
-            warn("[teleportCarToRace1Start] TeleportModule not loaded")
-            return
-        end
-
-        local car = getCar()
-        if not car then
-            warn("[teleportCarToRace1Start] Car not found")
-            return
-        end
-
-        local startCF = CFrame.new(
-            3260.53076, -7.51575422, 1015.698,
-            -3.36170197e-05, -0.951051414, -0.309032798,
-            1, -3.36170197e-05, -5.31971455e-06,
-            -5.31971455e-06, -0.309032798, 0.951051414
-        )
-
-        TeleportModule.Teleport(LocalPlayer, car, startCF)
+    local function isPlayerAtRace1Start()
+        local char = LocalPlayer.Character
+        local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return false end
+        local dist = (hrp.Position - RACE1_START_CF.Position).Magnitude
+        return dist <= START_RADIUS
     end
 
     --------------------------------------------------
@@ -564,71 +546,49 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Общие функции для Races
+    -- Auto City Highway Race 🏁 (логика «жду у старта»)
     --------------------------------------------------
 
-    local function getRaceByName(raceName)
-        local races = Workspace:FindFirstChild("Races")
-        if not races then return nil end
-        return races:FindFirstChild(raceName)
-    end
-
-    local function getRaceConfig(raceName)
-        local race = getRaceByName(raceName)
-        if not race then return nil end
-        return race:FindFirstChild("Config")
-    end
-
-    local function startSoloForRace(raceName)
-        local ok, err = pcall(function()
-            local config = getRaceConfig(raceName)
-            if not config then
-                warn("[startSoloForRace] No Config for", raceName)
-                return
-            end
-            local solo = config:FindFirstChild("Solo")
-            if solo and solo:IsA("BoolValue") then
-                solo.Value = true
-            else
-                warn("[startSoloForRace] Solo BoolValue not found for", raceName)
-            end
-        end)
-        if not ok then
-            warn("[startSoloForRace] Error:", err)
-        end
-    end
-
-    --------------------------------------------------
-    -- Auto City Highway Race 🏁
-    --------------------------------------------------
-
-    local function runRace1Route()
+    local function runRace1Loop()
         local ok, err = pcall(function()
             race1Running = true
             print("[AisbergHub] Auto City Highway Race loop started")
 
             while race1Running do
-                teleportCarToRace1Start()
-                if not race1Running then break end
-
-                startSoloForRace("Race1")
-                if not race1Running then break end
-
-                task.wait(4)
-                if not race1Running then break end
-
-                local car
-                for i = 1, 60 do
-                    car = getCar()
-                    if car then break end
-                    task.wait(0.1)
-                    if not race1Running then break end
+                -- 1) ждём, пока игрок в машине и в стартовой зоне
+                while race1Running and (not isPlayerInCar() or not isPlayerAtRace1Start()) do
+                    task.wait(0.2)
                 end
-                if not race1Running or not car then
-                    if not car then
-                        warn("[runRace1Route] Car not found, breaking loop")
-                    end
-                    break
+                if not race1Running then break end
+
+                print("[AisbergHub] Player at Race1 start, waiting 10s for manual race start")
+
+                -- 2) даём 10 секунд, чтобы ты успел нажать Start в их меню
+                for i = 1, 100 do
+                    if not race1Running then break end
+                    task.wait(0.1)
+                end
+                if not race1Running then break end
+
+                -- 3) ещё 3 секунды на внутренний отсчёт гонки
+                print("[AisbergHub] Waiting extra 3s for race countdown")
+                for i = 1, 30 do
+                    if not race1Running then break end
+                    task.wait(0.1)
+                end
+                if not race1Running then break end
+
+                -- если за это время ты вылез из машины — начинаем цикл заново
+                if not isPlayerInCar() then
+                    print("[AisbergHub] Player left car before route, restarting wait loop")
+                    continue
+                end
+
+                -- 4) получаем машину и едем круг
+                local car = getCar()
+                if not car then
+                    warn("[runRace1Loop] Car not found, restarting wait loop")
+                    continue
                 end
 
                 local speed = getSpeed()
@@ -641,31 +601,38 @@ local function createMainGui()
                     end
                 end
 
-                if currentTween then
-                    currentTween:Cancel()
+                if not race1Running then break end
+
+                -- 5) возвращаем машину на стартовый CFrame
+                print("[AisbergHub] Returning to Race1 start")
+                tweenRace(car, RACE1_START_CF, speed)
+
+                if not race1Running then break end
+
+                -- 6) после круга — пауза 10 секунд и всё по кругу
+                print("[AisbergHub] Lap finished, waiting 10s before next cycle")
+                for i = 1, 100 do
+                    if not race1Running then break end
+                    task.wait(0.1)
                 end
-                if not race1Running then break end
-
-                teleportCarToRace1Start()
-                if not race1Running then break end
-
-                task.wait(3)
-                if not race1Running then break end
-
-                startSoloForRace("Race1")
             end
 
+            if currentTween then
+                currentTween:Cancel()
+            end
             if _G.raceGround then
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
             end
 
-            race1Running = false
             print("[AisbergHub] Auto City Highway Race loop exited")
         end)
         if not ok then
-            warn("[runRace1Route] Error:", err)
+            warn("[runRace1Loop] Error:", err)
             race1Running = false
+            if currentTween then
+                currentTween:Cancel()
+            end
             if _G.raceGround then
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
@@ -785,7 +752,8 @@ local function createMainGui()
             race1Btn.Text = "Stop City Highway Race 🏁"
             print("[AisbergHub] Auto City Highway Race started")
             task.spawn(function()
-                runRace1Route()
+                runRace1Loop()
+                race1Running = false
                 race1Btn.Text = "Auto City Highway Race 🏁"
                 print("[AisbergHub] Auto City Highway Race stopped")
             end)
@@ -798,6 +766,7 @@ local function createMainGui()
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
             end
+            race1Btn.Text = "Auto City Highway Race 🏁"
             print("[AisbergHub] Auto City Highway Race stopped (by button)")
         end
     end)
