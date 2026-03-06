@@ -1,389 +1,573 @@
--- === AisbergHub Race2 Checkpoint CFrame Logger v1 ===
--- Окно: Start/Stop + Clear + Copy Output + ресайз
--- Логируем CFrame частей 1..70 + Finish при касании
+-- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem/Ping/Country, фикс скролла) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
-
-local debugGui = Instance.new("ScreenGui")
-debugGui.Name = "AisbergHub_Race2CFrameLogger"
-debugGui.ResetOnSpawn = false
-debugGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 480, 0, 300)
-main.Position = UDim2.new(0.5, -240, 0.2, 0)
-main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-main.BorderSizePixel = 0
-main.Active = true
-main.Draggable = true
-main.Parent = debugGui
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.BorderSizePixel = 0
-title.Font = Enum.Font.GothamBold
-title.Text = "AisbergHub • Race2 CFrame Logger"
-title.TextSize = 14
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = main
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -30, 0, 0)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Text = "X"
-closeBtn.TextSize = 16
-closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-closeBtn.Parent = main
-
-closeBtn.MouseButton1Click:Connect(function()
-    debugGui:Destroy()
-end)
-
-local startBtn = Instance.new("TextButton")
-startBtn.Size = UDim2.new(0, 150, 0, 30)
-startBtn.Position = UDim2.new(0, 10, 0, 40)
-startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-startBtn.BorderSizePixel = 0
-startBtn.Font = Enum.Font.GothamBold
-startBtn.Text = "Start CFrame Logger"
-startBtn.TextSize = 14
-startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-startBtn.Parent = main
-
-local clearBtn = Instance.new("TextButton")
-clearBtn.Size = UDim2.new(0, 120, 0, 30)
-clearBtn.Position = UDim2.new(0, 170, 0, 40)
-clearBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-clearBtn.BorderSizePixel = 0
-clearBtn.Font = Enum.Font.GothamBold
-clearBtn.Text = "Clear"
-clearBtn.TextSize = 14
-clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-clearBtn.Parent = main
-
-local copyBtn = Instance.new("TextButton")
-copyBtn.Size = UDim2.new(0, 120, 0, 30)
-copyBtn.Position = UDim2.new(0, 300, 0, 40)
-copyBtn.BackgroundColor3 = Color3.fromRGB(80, 110, 160)
-copyBtn.BorderSizePixel = 0
-copyBtn.Font = Enum.Font.GothamBold
-copyBtn.Text = "Copy Output"
-copyBtn.TextSize = 14
-copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyBtn.Parent = main
-
--- Скроллируемый вывод
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 0.5, -60)
-scroll.Position = UDim2.new(0, 10, 0, 80)
-scroll.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 6
-scroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scroll.ClipsDescendants = true
-scroll.Parent = main
-
-local outputBox = Instance.new("TextLabel")
-outputBox.BackgroundTransparency = 1
-outputBox.Size = UDim2.new(1, -4, 0, 0)
-outputBox.Position = UDim2.new(0, 2, 0, 2)
-outputBox.AutomaticSize = Enum.AutomaticSize.Y
-outputBox.Font = Enum.Font.Code
-outputBox.TextXAlignment = Enum.TextXAlignment.Left
-outputBox.TextYAlignment = Enum.TextYAlignment.Top
-outputBox.TextWrapped = true
-outputBox.Text = ""
-outputBox.TextSize = 14
-outputBox.TextColor3 = Color3.fromRGB(0, 255, 0)
-outputBox.Parent = scroll
-
-local function updateCanvas()
-    scroll.CanvasSize = UDim2.new(0, 0, 0, outputBox.AbsoluteSize.Y + 10)
-end
-
-outputBox:GetPropertyChangedSignal("Text"):Connect(function()
-    updateCanvas()
-    task.defer(function()
-        scroll.CanvasPosition = Vector2.new(
-            0,
-            math.max(scroll.CanvasSize.Y.Offset - scroll.AbsoluteSize.Y, 0)
-        )
-    end)
-end)
-
-local function appendLine(text)
-    if outputBox.Text == "" then
-        outputBox.Text = text
-    else
-        outputBox.Text = outputBox.Text .. "\n" .. text
-    end
-end
-
-clearBtn.MouseButton1Click:Connect(function()
-    outputBox.Text = ""
-end)
-
--- Окно копирования
-local copyBox = Instance.new("TextBox")
-copyBox.Size = UDim2.new(1, -20, 0.5, -30)
-copyBox.Position = UDim2.new(0, 10, 0.5, 10)
-copyBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-copyBox.BorderSizePixel = 0
-copyBox.TextEditable = true
-copyBox.MultiLine = true
-copyBox.ClearTextOnFocus = false
-copyBox.TextWrapped = true
-copyBox.Font = Enum.Font.Code
-copyBox.TextSize = 14
-copyBox.TextXAlignment = Enum.TextXAlignment.Left
-copyBox.TextYAlignment = Enum.TextYAlignment.Top
-copyBox.TextColor3 = Color3.fromRGB(200, 255, 200)
-copyBox.Text = ""
-copyBox.Parent = main
-
-copyBtn.MouseButton1Click:Connect(function()
-    copyBox.Text = outputBox.Text
-    -- дальше Ctrl+A / Ctrl+C
-end)
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local LocalizationService = game:GetService("LocalizationService")
 
 --------------------------------------------------
--- Ресайз (правый‑нижний угол, без сдвига)
+-- Welcome баннер
 --------------------------------------------------
 
-local resizeHandle = Instance.new("Frame")
-resizeHandle.Size = UDim2.new(0, 14, 0, 14)
-resizeHandle.Position = UDim2.new(1, -14, 1, -14)
-resizeHandle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-resizeHandle.BorderSizePixel = 0
-resizeHandle.Parent = main
+local function showWelcomeAndThen(callback)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "AisbergHub_Welcome"
+    gui.ResetOnSpawn = false
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local resizing = false
-local resizeStartMouse
-local resizeStartSize
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 420, 0, 80)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BorderSizePixel = 0
+    frame.BackgroundTransparency = 1
+    frame.Parent = gui
 
-resizeHandle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        resizing = true
-        resizeStartMouse = UIS:GetMouseLocation()
-        resizeStartSize = main.Size
-    end
-end)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
 
-resizeHandle.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        resizing = false
-    end
-end)
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1.5
+    stroke.Color = Color3.fromRGB(90, 140, 255)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Transparency = 1
+    stroke.Parent = frame
 
-UIS.InputChanged:Connect(function(input)
-    if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local current = UIS:GetMouseLocation()
-        local delta = current - resizeStartMouse
+    local title = Instance.new("TextLabel")
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 12, 0, 12)
+    title.Size = UDim2.new(1, -24, 0, 26)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 22
+    title.TextXAlignment = Enum.TextXAlignment.Center
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextTransparency = 1
+    title.Text = "WELCOME TO THE AISBERG HUB!"
+    title.Parent = frame
 
-        local newW = math.max(360, resizeStartSize.X.Offset + delta.X)
-        local newH = math.max(240, resizeStartSize.Y.Offset + delta.Y)
-        main.Size = UDim2.new(0, newW, 0, newH)
-    end
-end)
+    local desc = Instance.new("TextLabel")
+    desc.BackgroundTransparency = 1
+    desc.Position = UDim2.new(0, 12, 0, 40)
+    desc.Size = UDim2.new(1, -24, 0, 26)
+    desc.Font = Enum.Font.Gotham
+    desc.TextSize = 14
+    desc.TextWrapped = true
+    desc.TextXAlignment = Enum.TextXAlignment.Center
+    desc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    desc.TextTransparency = 1
+    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Playtime Rewards"
+    desc.Parent = frame
 
---------------------------------------------------
--- Логика: поиск чекпоинтов Race2 и лог CFrame
---------------------------------------------------
+    local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(frame,  inInfo, {BackgroundTransparency = 0.05}):Play()
+    TweenService:Create(stroke, inInfo, {Transparency = 0}):Play()
+    TweenService:Create(title,  inInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(desc,   inInfo, {TextTransparency = 0.1}):Play()
+    task.wait(0.45)
 
-local running = false
-local connections = {}
-local touchedOnce = {} -- чтобы один чекпоинт не спамил миллион раз
+    task.wait(2.0)
 
--- helper: форматировать CFrame так, как ты просишь
-local function formatCFrame(idx, cf)
-    local x, y, z = cf.X, cf.Y, cf.Z
-    local r00, r01, r02,
-          r10, r11, r12,
-          r20, r21, r22 = cf:ToOrientation()
-    -- ВАЖНО: ToOrientation даёт углы, а не матрицу, но тебе нужна именно матрица,
-    -- поэтому лучше взять элементы CFrame напрямую:
-    local m00, m01, m02,
-          m10, m11, m12,
-          m20, m21, m22 = cf:GetComponents()
-    -- GetComponents возвращает x,y,z,m00,m01,..., поэтому перезапишем:
-    x, y, z,
-    m00, m01, m02,
-    m10, m11, m12,
-    m20, m21, m22 = cf:GetComponents()
+    local outInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    TweenService:Create(frame,  outInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(stroke, outInfo, {Transparency = 1}):Play()
+    TweenService:Create(title,  outInfo, {TextTransparency = 1}):Play()
+    TweenService:Create(desc,   outInfo, {TextTransparency = 1}):Play()
+    task.wait(0.45)
 
-    return string.format(
-        "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s",
-        idx,
-        tostring(x),
-        tostring(y),
-        tostring(z),
-        tostring(m00),
-        tostring(m01),
-        tostring(m02),
-        tostring(m10),
-        tostring(m11),
-        tostring(m12)
-        -- если нужно все 9 элементов, можно добавить m20,m21,m22,
-        -- но у тебя в примере 9 чисел после позиции, поэтому:
-        -- x,y,z, r00,r01,r02,r10,r11,r12,r20,r21,r22
-    )
+    gui:Destroy()
+    if callback then callback() end
 end
 
--- но в твоём примере: x,y,z, r00,r01,r02,r10,r11,r12,r20,r21,r22 = 12 чисел,
--- значит всё‑таки надо 12:
-local function formatCFrameFull(idx, cf)
-    local x, y, z,
-    r00, r01, r02,
-    r10, r11, r12,
-    r20, r21, r22 = cf:GetComponents()
+--------------------------------------------------
+-- Playtime Debug Window
+--------------------------------------------------
 
-    return string.format(
-        "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
-        idx,
-        tostring(x),
-        tostring(y),
-        tostring(z),
-        tostring(r00),
-        tostring(r01),
-        tostring(r02),
-        tostring(r10),
-        tostring(r11),
-        tostring(r12),
-        tostring(r20),
-        tostring(r21),
-        tostring(r22)
-    )
-end
+local function createPlaytimeDebugWindow()
+    local debugGui = Instance.new("ScreenGui")
+    debugGui.Name = "AisbergHub_PlaytimeDebug"
+    debugGui.ResetOnSpawn = false
+    debugGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local function disconnectAll()
-    for _, conn in ipairs(connections) do
-        if conn.Connected then
-            conn:Disconnect()
+    local main = Instance.new("Frame")
+    main.Size = UDim2.new(0, 540, 0, 340)
+    main.Position = UDim2.new(0.5, -270, 0.2, 0)
+    main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    main.BorderSizePixel = 0
+    main.Parent = debugGui
+
+    -- минимальный размер = стартовый размер окна
+    local minWidth  = main.Size.X.Offset
+    local minHeight = main.Size.Y.Offset
+
+    --------------------------------------------------
+    -- DRAG (отдельно)
+    --------------------------------------------------
+
+    local dragging = false
+    local dragStartMouse
+    local dragStartPos
+
+    local function onDragInput(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStartMouse
+            main.Position = UDim2.new(
+                dragStartPos.X.Scale,
+                dragStartPos.X.Offset + delta.X,
+                dragStartPos.Y.Scale,
+                dragStartPos.Y.Offset + delta.Y
+            )
         end
     end
-    table.clear(connections)
-end
 
-local function startLogger()
-    if running then return end
-    running = true
-    startBtn.Text = "Stop CFrame Logger"
-    startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
-    appendLine("[Start] CFrame logger started")
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    title.BorderSizePixel = 0
+    title.Font = Enum.Font.GothamBold
+    title.Text = "AisbergHub • Playtime Debug"
+    title.TextSize = 14
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = main
 
-    table.clear(touchedOnce)
-    disconnectAll()
+    title.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStartMouse = input.Position
+            dragStartPos = main.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
 
-    local ok, err = pcall(function()
-        -- Workspace > Races > Race2 > Появляется Race > потом Race2_уникальный код > checkpoint
-        local races = Workspace:WaitForChild("Races")
-        local race2Root = races:WaitForChild("Race2")
+    UIS.InputChanged:Connect(onDragInput)
 
-        -- "Появляется Race" и "Race2_уникальный код" могут создаваться динамически
-        -- поэтому слушаем ChildAdded у Race2
-        local function hookRaceFolder(raceFolder)
-            -- внутри Race2_уникальный кода ждём папку checkpoint
-            local function setupForRaceInstance(instance)
-                if instance:IsA("Folder") and instance.Name:sub(1,5) == "Race2" then
-                    local checkpointFolder = instance:FindFirstChild("checkpoint")
-                        or instance:WaitForChild("checkpoint", 5)
-                    if checkpointFolder then
-                        appendLine("[Info] Found checkpoint folder: " .. checkpointFolder:GetFullName())
-                        -- ищем Part'ы 1..70 и Finish
-                        for _, part in ipairs(checkpointFolder:GetChildren()) do
-                            if part:IsA("BasePart") then
-                                local idx = tonumber(part.Name)
-                                local isFinish = (part.Name == "Finish")
-                                if (idx and idx >= 1 and idx <= 70) or isFinish then
-                                    local labelIndex = isFinish and 999 or idx
-                                    appendLine(string.format(
-                                        "[Bind] %s (index=%s) -> .Touched",
-                                        part.Name,
-                                        tostring(labelIndex)
-                                    ))
+    --------------------------------------------------
+    -- Кнопки управления
+    --------------------------------------------------
 
-                                    local conn = part.Touched:Connect(function(hit)
-                                        if not running then return end
-                                        local char = LocalPlayer.Character
-                                        if not char then return end
-                                        if not hit:IsDescendantOf(char) then return end
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Position = UDim2.new(1, -30, 0, 0)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Text = "X"
+    closeBtn.TextSize = 16
+    closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    closeBtn.Parent = main
 
-                                        if touchedOnce[part] then return end
-                                        touchedOnce[part] = true
+    closeBtn.MouseButton1Click:Connect(function()
+        debugGui:Destroy()
+    end)
 
-                                        local line = formatCFrameFull(labelIndex, part.CFrame)
-                                        appendLine(line)
-                                    end)
-                                    table.insert(connections, conn)
-                                end
-                            end
-                        end
-                    else
-                        appendLine("[Warn] checkpoint folder not found in " .. instance.Name)
+    local startBtn = Instance.new("TextButton")
+    startBtn.Size = UDim2.new(0, 150, 0, 30)
+    startBtn.Position = UDim2.new(0, 10, 0, 40)
+    startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+    startBtn.BorderSizePixel = 0
+    startBtn.Font = Enum.Font.GothamBold
+    startBtn.Text = "Start Playtime Debug"
+    startBtn.TextSize = 14
+    startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    startBtn.Parent = main
+
+    local clearBtn = Instance.new("TextButton")
+    clearBtn.Size = UDim2.new(0, 120, 0, 30)
+    clearBtn.Position = UDim2.new(0, 170, 0, 40)
+    clearBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    clearBtn.BorderSizePixel = 0
+    clearBtn.Font = Enum.Font.GothamBold
+    clearBtn.Text = "Clear Log"
+    clearBtn.TextSize = 14
+    clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    clearBtn.Parent = main
+
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Size = UDim2.new(0, 140, 0, 30)
+    copyBtn.Position = UDim2.new(0, 300, 0, 40)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(80, 110, 160)
+    copyBtn.BorderSizePixel = 0
+    copyBtn.Font = Enum.Font.GothamBold
+    copyBtn.Text = "Copy to bottom"
+    copyBtn.TextSize = 14
+    copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyBtn.Parent = main
+
+    --------------------------------------------------
+    -- FPS / Memory / Ping / Country статус-бар
+    --------------------------------------------------
+
+    local statsLabel = Instance.new("TextLabel")
+    statsLabel.Size = UDim2.new(1, -20, 0, 18)
+    statsLabel.Position = UDim2.new(0, 10, 0, 72)
+    statsLabel.BackgroundTransparency = 1
+    statsLabel.Font = Enum.Font.Code
+    statsLabel.TextSize = 13
+    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    statsLabel.Text = "FPS: ...  |  LuaMem: ...  |  Ping: ... ms  |  Country: ..."
+    statsLabel.Parent = main
+
+    local lastUpdate = 0
+    local frameCount = 0
+    local cachedCountry = "..."
+
+    task.spawn(function()
+        local ok, region = pcall(function()
+            return LocalizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
+        end)
+        if ok and typeof(region) == "string" and region ~= "" then
+            cachedCountry = region
+        else
+            cachedCountry = "N/A"
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function(dt)
+        frameCount += 1
+        lastUpdate += dt
+
+        if lastUpdate >= 0.5 then
+            local fps = math.floor(frameCount / lastUpdate + 0.5)
+
+            local kb = collectgarbage("count") -- KB[web:328]
+            local mb = kb / 1024
+
+            local pingSec = LocalPlayer:GetNetworkPing() or 0 -- seconds[web:344]
+            local pingMs = math.floor(pingSec * 2000)
+
+            statsLabel.Text = string.format(
+                "FPS: %d  |  LuaMem: %.2f MB  |  Ping: %d ms  |  Country: %s",
+                fps,
+                mb,
+                pingMs,
+                cachedCountry
+            )
+
+            frameCount = 0
+            lastUpdate = 0
+        end
+    end)
+
+    --------------------------------------------------
+    -- Верхняя панель: OUTPUT
+    --------------------------------------------------
+
+    local topContainer = Instance.new("Frame")
+    topContainer.Size = UDim2.new(1, -20, 0.5, -80)
+    topContainer.Position = UDim2.new(0, 10, 0, 100)
+    topContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    topContainer.BorderSizePixel = 0
+    topContainer.Parent = main
+
+    local topTitle = Instance.new("TextLabel")
+    topTitle.Size = UDim2.new(1, -10, 0, 18)
+    topTitle.Position = UDim2.new(0, 5, 0, 2)
+    topTitle.BackgroundTransparency = 1
+    topTitle.Font = Enum.Font.GothamBold
+    topTitle.TextSize = 12
+    topTitle.TextXAlignment = Enum.TextXAlignment.Left
+    topTitle.TextColor3 = Color3.fromRGB(170, 170, 170)
+    topTitle.Text = "OUTPUT"
+    topTitle.Parent = topContainer
+
+    local topBorder = Instance.new("Frame")
+    topBorder.Size = UDim2.new(1, -10, 0, 1)
+    topBorder.Position = UDim2.new(0, 5, 0, 20)
+    topBorder.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    topBorder.BorderSizePixel = 0
+    topBorder.Parent = topContainer
+
+    local topScroll = Instance.new("ScrollingFrame")
+    topScroll.Size = UDim2.new(1, -10, 1, -26)
+    topScroll.Position = UDim2.new(0, 5, 0, 24)
+    topScroll.BackgroundTransparency = 1
+    topScroll.BorderSizePixel = 0
+    topScroll.ScrollBarThickness = 6
+    topScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
+    topScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
+    topScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+    topScroll.ScrollingEnabled = true
+    topScroll.ClipsDescendants = true
+    topScroll.Parent = topContainer
+
+    local logLabel = Instance.new("TextLabel")
+    logLabel.BackgroundTransparency = 1
+    logLabel.Size = UDim2.new(1, -4, 0, 0)
+    logLabel.Position = UDim2.new(0, 2, 0, 2)
+    logLabel.AutomaticSize = Enum.AutomaticSize.Y
+    logLabel.Font = Enum.Font.Code
+    logLabel.TextXAlignment = Enum.TextXAlignment.Left
+    logLabel.TextYAlignment = Enum.TextYAlignment.Top
+    logLabel.TextWrapped = true
+    logLabel.Text = ""
+    logLabel.TextSize = 14
+    logLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    logLabel.Parent = topScroll
+
+    local function updateTopCanvas()
+        local contentHeight = logLabel.AbsoluteSize.Y
+        local frameHeight = topScroll.AbsoluteSize.Y
+        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
+        topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
+    end
+
+    logLabel:GetPropertyChangedSignal("Text"):Connect(function()
+        updateTopCanvas()
+        task.defer(function()
+            topScroll.CanvasPosition = Vector2.new(
+                0,
+                math.max(topScroll.CanvasSize.Y.Offset - topScroll.AbsoluteSize.Y, 0)
+            )
+        end)
+    end)
+
+    topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        updateTopCanvas()
+    end)
+
+    local function appendLine(text)
+        if logLabel.Text == "" then
+            logLabel.Text = text
+        else
+            logLabel.Text = logLabel.Text .. "\n" .. text
+        end
+    end
+
+    clearBtn.MouseButton1Click:Connect(function()
+        logLabel.Text = ""
+    end)
+
+    --------------------------------------------------
+    -- Нижняя панель: COPY OUTPUT
+    --------------------------------------------------
+
+    local bottomContainer = Instance.new("Frame")
+    bottomContainer.Size = UDim2.new(1, -20, 0.5, -40)
+    bottomContainer.Position = UDim2.new(0, 10, 0.5, 10)
+    bottomContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    bottomContainer.BorderSizePixel = 0
+    bottomContainer.Parent = main
+
+    local bottomTitle = Instance.new("TextLabel")
+    bottomTitle.Size = UDim2.new(1, -10, 0, 18)
+    bottomTitle.Position = UDim2.new(0, 5, 0, 2)
+    bottomTitle.BackgroundTransparency = 1
+    bottomTitle.Font = Enum.Font.GothamBold
+    bottomTitle.TextSize = 12
+    bottomTitle.TextXAlignment = Enum.TextXAlignment.Left
+    bottomTitle.TextColor3 = Color3.fromRGB(170, 170, 170)
+    bottomTitle.Text = "COPY OUTPUT"
+    bottomTitle.Parent = bottomContainer
+
+    local bottomBorder = Instance.new("Frame")
+    bottomBorder.Size = UDim2.new(1, -10, 0, 1)
+    bottomBorder.Position = UDim2.new(0, 5, 0, 20)
+    bottomBorder.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    bottomBorder.BorderSizePixel = 0
+    bottomBorder.Parent = bottomContainer
+
+    local bottomScroll = Instance.new("ScrollingFrame")
+    bottomScroll.Size = UDim2.new(1, -10, 1, -26)
+    bottomScroll.Position = UDim2.new(0, 5, 0, 24)
+    bottomScroll.BackgroundTransparency = 1
+    bottomScroll.BorderSizePixel = 0
+    bottomScroll.ScrollBarThickness = 6
+    bottomScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
+    bottomScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
+    bottomScroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+    bottomScroll.ScrollingEnabled = true
+    bottomScroll.ClipsDescendants = true
+    bottomScroll.Parent = bottomContainer
+
+    local copyBox = Instance.new("TextBox")
+    copyBox.BackgroundTransparency = 1
+    copyBox.Size = UDim2.new(1, -4, 0, 0)
+    copyBox.Position = UDim2.new(0, 2, 0, 2)
+    copyBox.AutomaticSize = Enum.AutomaticSize.Y
+    copyBox.Font = Enum.Font.Code
+    copyBox.TextXAlignment = Enum.TextXAlignment.Left
+    copyBox.TextYAlignment = Enum.TextYAlignment.Top
+    copyBox.TextWrapped = true
+    copyBox.MultiLine = true
+    copyBox.ClearTextOnFocus = false
+    copyBox.TextEditable = true
+    copyBox.TextSize = 14
+    copyBox.TextColor3 = Color3.fromRGB(200, 255, 200)
+    copyBox.Text = ""
+    copyBox.Parent = bottomScroll
+
+    local function updateBottomCanvas()
+        local contentHeight = copyBox.AbsoluteSize.Y
+        local frameHeight = bottomScroll.AbsoluteSize.Y
+        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
+        bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
+    end
+
+    copyBox:GetPropertyChangedSignal("Text"):Connect(function()
+        updateBottomCanvas()
+    end)
+
+    bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        updateBottomCanvas()
+    end)
+
+    copyBtn.MouseButton1Click:Connect(function()
+        copyBox.Text = logLabel.Text
+    end)
+
+    --------------------------------------------------
+    -- RESIZE (отдельно, позицию main не трогаем)
+    --------------------------------------------------
+
+    local resizeHandle = Instance.new("Frame")
+    resizeHandle.Size = UDim2.new(0, 14, 0, 14)
+    resizeHandle.Position = UDim2.new(1, -14, 1, -14)
+    resizeHandle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    resizeHandle.BorderSizePixel = 0
+    resizeHandle.Parent = main
+
+    local resizing = false
+    local resizeStartMouse
+    local resizeStartSize
+
+    resizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = true
+            resizeStartMouse = UIS:GetMouseLocation()
+            resizeStartSize = main.Size
+        end
+    end)
+
+    resizeHandle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = false
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local current = UIS:GetMouseLocation()
+            local delta = current - resizeStartMouse
+
+            local newW = math.max(minWidth,  resizeStartSize.X.Offset + delta.X)
+            local newH = math.max(minHeight, resizeStartSize.Y.Offset + delta.Y)
+            main.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+
+    --------------------------------------------------
+    -- Логика сканирования PlaytimeRewards
+    --------------------------------------------------
+
+    local running = false
+
+    local function startScanner()
+        if running then return end
+        running = true
+        startBtn.Text = "Stop Playtime Debug"
+        startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
+
+        appendLine("[Start] Playtime debug started")
+
+        local ok, err = pcall(function()
+            local pg = LocalPlayer:WaitForChild("PlayerGui")
+            local mainUi = pg:WaitForChild("Main_User_Interface")
+            local rewardsRoot = mainUi:WaitForChild("Rewards")
+            local playtime = rewardsRoot:WaitForChild("PlaytimeRewards")
+
+            local rewardsFolder = playtime:FindFirstChild("Rewards") or playtime
+
+            appendLine("[Info] Using folder: " .. rewardsFolder.Name)
+
+            local rewardButtons = {}
+
+            for _, tierFrame in ipairs(rewardsFolder:GetChildren()) do
+                if tierFrame:IsA("Frame") then
+                    local btn = tierFrame:FindFirstChild("Button")
+                    if btn and btn:IsA("GuiButton") then
+                        local txtLabel = btn:FindFirstChild("Frame") and btn.Frame:FindFirstChild("TextLabel")
+                        local claimedGui = btn:FindFirstChild("Claimed")
+                        table.insert(rewardButtons, {
+                            Tier    = tierFrame.Name,
+                            Button  = btn,
+                            Label   = txtLabel,
+                            Claimed = claimedGui
+                        })
+                        appendLine(string.format(
+                            "[Found] Tier=%s Label=%s HasClaimed=%s",
+                            tierFrame.Name,
+                            txtLabel and txtLabel.Text or "nil",
+                            tostring(claimedGui ~= nil)
+                        ))
                     end
                 end
             end
 
-            -- уже существующие дети
-            for _, child in ipairs(raceFolder:GetChildren()) do
-                setupForRaceInstance(child)
+            if #rewardButtons == 0 then
+                appendLine("[Warn] No reward buttons found")
+                return
             end
 
-            -- новые Race2_* которые появляются позже
-            local c = raceFolder.ChildAdded:Connect(function(child)
-                setupForRaceInstance(child)
+            task.spawn(function()
+                while running do
+                    task.wait(1)
+                    for _, info in ipairs(rewardButtons) do
+                        local btn     = info.Button
+                        local lbl     = info.Label
+                        local claimed = info.Claimed
+
+                        if btn and btn.Parent and btn.Parent.Visible and btn.Visible then
+                            local text = lbl and lbl.Text or "nil"
+                            local claimedVisible = claimed and claimed.Visible or false
+                            local line = string.format(
+                                "[State] Tier=%s Text=%s Claimed.Visible=%s Active=%s",
+                                info.Tier,
+                                text,
+                                tostring(claimedVisible),
+                                tostring(btn.Active)
+                            )
+                            appendLine(line)
+                        end
+                    end
+                end
+                appendLine("[Stop] Playtime debug stopped")
             end)
-            table.insert(connections, c)
-        end
-
-        -- "Появляется Race" — это какой‑то контейнер внутри Race2
-        -- если он уже есть:
-        for _, child in ipairs(race2Root:GetChildren()) do
-            if child:IsA("Folder") and child.Name == "Race" then
-                hookRaceFolder(child)
-            end
-        end
-
-        -- и слушаем его появление
-        local raceChildConn = race2Root.ChildAdded:Connect(function(child)
-            if child:IsA("Folder") and child.Name == "Race" then
-                hookRaceFolder(child)
-            end
         end)
-        table.insert(connections, raceChildConn)
-    end)
 
-    if not ok then
-        appendLine("[Error] Init: " .. tostring(err))
+        if not ok then
+            appendLine("[Error] Init: " .. tostring(err))
+            running = false
+            startBtn.Text = "Start Playtime Debug"
+            startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+        end
+    end
+
+    local function stopScanner()
+        if not running then return end
         running = false
-        startBtn.Text = "Start CFrame Logger"
+        startBtn.Text = "Start Playtime Debug"
         startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-        disconnectAll()
     end
+
+    startBtn.MouseButton1Click:Connect(function()
+        if running then
+            stopScanner()
+        else
+            startScanner()
+        end
+    end)
 end
 
-local function stopLogger()
-    if not running then return end
-    running = false
-    startBtn.Text = "Start CFrame Logger"
-    startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-    appendLine("[Stop] CFrame logger stopped")
-    disconnectAll()
-end
+--------------------------------------------------
+-- Старт
+--------------------------------------------------
 
-startBtn.MouseButton1Click:Connect(function()
-    if running then
-        stopLogger()
-    else
-        startLogger()
-    end
-end)
+showWelcomeAndThen(createPlaytimeDebugWindow)
