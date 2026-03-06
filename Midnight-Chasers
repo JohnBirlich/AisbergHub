@@ -493,8 +493,8 @@ local function createMainGui()
     --------------------------------------------------
 
     local function teleportCarToRace1Start()
-        if not TeleportModule or not TeleportModule.Teleport then
-            warn("[teleportCarToRace1Start] TeleportModule not available, skip teleport")
+        if not TeleportModule then
+            warn("[teleportCarToRace1Start] TeleportModule not loaded")
             return
         end
 
