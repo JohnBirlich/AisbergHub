@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (простой drag, resize, разделённый output) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (отдельный drag/resize, разделённый output) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -97,6 +97,26 @@ local function createPlaytimeDebugWindow()
     main.BorderSizePixel = 0
     main.Parent = debugGui
 
+    --------------------------------------------------
+    -- DRAG (отдельно)
+    --------------------------------------------------
+
+    local dragging = false
+    local dragStartMouse
+    local dragStartPos
+
+    local function onDragInput(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStartMouse
+            main.Position = UDim2.new(
+                dragStartPos.X.Scale,
+                dragStartPos.X.Offset + delta.X,
+                dragStartPos.Y.Scale,
+                dragStartPos.Y.Offset + delta.Y
+            )
+        end
+    end
+
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 30)
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -108,47 +128,20 @@ local function createPlaytimeDebugWindow()
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = main
 
-    --------------------------------------------------
-    -- ПРОСТОЙ DRAG
-    --------------------------------------------------
-
-    local dragging = false
-    local dragStart
-    local startPos
-
     title.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStart = input.Position
-            startPos = main.Position
+            dragStartMouse = input.Position
+            dragStartPos = main.Position
+            input.Changed:Connect(function(ch)
+                if ch == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
         end
     end)
 
-    title.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            main.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    --------------------------------------------------
+    UIS.InputChanged:Connect(onDragInput)
 
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -348,10 +341,11 @@ local function createPlaytimeDebugWindow()
 
     copyBtn.MouseButton1Click:Connect(function()
         copyBox.Text = logLabel.Text
+        -- Ctrl+A / Ctrl+C в copyBox
     end)
 
     --------------------------------------------------
-    -- RESIZE
+    -- RESIZE (отдельно, позицию main не трогаем)
     --------------------------------------------------
 
     local resizeHandle = Instance.new("Frame")
@@ -380,15 +374,15 @@ local function createPlaytimeDebugWindow()
     end)
 
     UIS.InputChanged:Connect(function(input)
-        if not resizing then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local current = UIS:GetMouseLocation()
+            local delta = current - resizeStartMouse
 
-        local current = UIS:GetMouseLocation()
-        local delta = current - resizeStartMouse
-
-        local newW = math.max(420, resizeStartSize.X.Offset + delta.X)
-        local newH = math.max(260, resizeStartSize.Y.Offset + delta.Y)
-        main.Size = UDim2.new(0, newW, 0, newH)
+            local newW = math.max(420, resizeStartSize.X.Offset + delta.X)
+            local newH = math.max(260, resizeStartSize.Y.Offset + delta.Y)
+            main.Size = UDim2.new(0, newW, 0, newH)
+            -- main.Position не меняем, window не двигается при ресайзе
+        end
     end)
 
     --------------------------------------------------
