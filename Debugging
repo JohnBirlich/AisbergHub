@@ -315,18 +315,13 @@ local function createPlaytimeDebugWindow()
     local function updateTopCanvas()
         local contentHeight = logLabel.AbsoluteSize.Y
         local frameHeight = topScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
+        local canvasY = math.max(contentHeight + 10, frameHeight)
         topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
     logLabel:GetPropertyChangedSignal("Text"):Connect(function()
         updateTopCanvas()
-        task.defer(function()
-            topScroll.CanvasPosition = Vector2.new(
-                0,
-                math.max(topScroll.CanvasSize.Y.Offset - topScroll.AbsoluteSize.Y, 0)
-            )
-        end)
+        -- без автоскролла, позицию задаёшь сам
     end)
 
     topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
@@ -407,7 +402,7 @@ local function createPlaytimeDebugWindow()
     local function updateBottomCanvas()
         local contentHeight = copyBox.AbsoluteSize.Y
         local frameHeight = bottomScroll.AbsoluteSize.Y
-        local canvasY = math.max(contentHeight + 20, frameHeight * 2)
+        local canvasY = math.max(contentHeight + 10, frameHeight)
         bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
@@ -471,7 +466,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- порядок x,y,z,r00..r22[web:563][web:574][web:565]
+        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:563][web:574][web:565]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -502,14 +497,13 @@ local function createPlaytimeDebugWindow()
         appendLine("[Start] Chekings CFrame dump")
 
         local ok, err = pcall(function()
-            -- Workspace > Chekings > Checkpoints > 1..70/Finish
+            -- Workspace > Chekings > Checkpoints > 1..70 / Finish
             local chekings = Workspace:WaitForChild("Chekings")
-            local checkpointsInt = chekings:WaitForChild("Checkpoints") -- IntValue по твоему описанию
+            local checkpointsFolder = chekings:WaitForChild("Checkpoints") -- тут лежат 1..70 и Finish[web:586][web:601]
 
-            -- сами части 1..70 и Finish лежат рядом (дети chekings)
             for i = 1, 70 do
                 local name = tostring(i)
-                local part = chekings:FindFirstChild(name)
+                local part = checkpointsFolder:FindFirstChild(name)
                 if part and part:IsA("BasePart") then
                     local line = formatCFrameLine(i, part.CFrame)
                     appendLine(line)
@@ -518,7 +512,7 @@ local function createPlaytimeDebugWindow()
                 end
             end
 
-            local finishPart = chekings:FindFirstChild("Finish")
+            local finishPart = checkpointsFolder:FindFirstChild("Finish")
             if finishPart and finishPart:IsA("BasePart") then
                 local line = formatCFrameLine(999, finishPart.CFrame)
                 appendLine(line)
