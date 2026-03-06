@@ -1,222 +1,15 @@
--- === AisbergHub Playtime Debug Window v4 ===
--- Start/Stop + Clear + Copy Output + ресайз без сдвига
+-- === Auto Playtime Rewards по состоянию Claim/Claimed ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
 
-local debugGui = Instance.new("ScreenGui")
-debugGui.Name = "AisbergHub_PlaytimeDebug"
-debugGui.ResetOnSpawn = false
-debugGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 480, 0, 300)
-main.Position = UDim2.new(0.5, -240, 0.2, 0)
-main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-main.BorderSizePixel = 0
-main.Active = true
-main.Draggable = true
-main.Parent = debugGui
-
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.BorderSizePixel = 0
-title.Font = Enum.Font.GothamBold
-title.Text = "AisbergHub • Playtime Debug"
-title.TextSize = 14
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = main
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -30, 0, 0)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Text = "X"
-closeBtn.TextSize = 16
-closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-closeBtn.Parent = main
-
-closeBtn.MouseButton1Click:Connect(function()
-    debugGui:Destroy()
-end)
-
-local startBtn = Instance.new("TextButton")
-startBtn.Size = UDim2.new(0, 150, 0, 30)
-startBtn.Position = UDim2.new(0, 10, 0, 40)
-startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-startBtn.BorderSizePixel = 0
-startBtn.Font = Enum.Font.GothamBold
-startBtn.Text = "Start Playtime Debug"
-startBtn.TextSize = 14
-startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-startBtn.Parent = main
-
-local clearBtn = Instance.new("TextButton")
-clearBtn.Size = UDim2.new(0, 120, 0, 30)
-clearBtn.Position = UDim2.new(0, 170, 0, 40)
-clearBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-clearBtn.BorderSizePixel = 0
-clearBtn.Font = Enum.Font.GothamBold
-clearBtn.Text = "Clear"
-clearBtn.TextSize = 14
-clearBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-clearBtn.Parent = main
-
-local copyBtn = Instance.new("TextButton")
-copyBtn.Size = UDim2.new(0, 120, 0, 30)
-copyBtn.Position = UDim2.new(0, 300, 0, 40)
-copyBtn.BackgroundColor3 = Color3.fromRGB(80, 110, 160)
-copyBtn.BorderSizePixel = 0
-copyBtn.Font = Enum.Font.GothamBold
-copyBtn.Text = "Copy Output"
-copyBtn.TextSize = 14
-copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyBtn.Parent = main
-
--- Скроллируемый вывод
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 0.5, -60)
-scroll.Position = UDim2.new(0, 10, 0, 80)
-scroll.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 6
-scroll.ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-scroll.ClipsDescendants = true
-scroll.Parent = main
-
-local outputBox = Instance.new("TextLabel")
-outputBox.BackgroundTransparency = 1
-outputBox.Size = UDim2.new(1, -4, 0, 0)
-outputBox.Position = UDim2.new(0, 2, 0, 2)
-outputBox.AutomaticSize = Enum.AutomaticSize.Y
-outputBox.Font = Enum.Font.Code
-outputBox.TextXAlignment = Enum.TextXAlignment.Left
-outputBox.TextYAlignment = Enum.TextYAlignment.Top
-outputBox.TextWrapped = true
-outputBox.Text = ""
-outputBox.TextSize = 14
-outputBox.TextColor3 = Color3.fromRGB(0, 255, 0)
-outputBox.Parent = scroll
-
-local function updateCanvas()
-    scroll.CanvasSize = UDim2.new(0, 0, 0, outputBox.AbsoluteSize.Y + 10)
-end
-
-outputBox:GetPropertyChangedSignal("Text"):Connect(function()
-    updateCanvas()
-    task.defer(function()
-        scroll.CanvasPosition = Vector2.new(
-            0,
-            math.max(scroll.CanvasSize.Y.Offset - scroll.AbsoluteSize.Y, 0)
-        )
-    end)
-end)
-
-local function appendLine(text)
-    if outputBox.Text == "" then
-        outputBox.Text = text
-    else
-        outputBox.Text = outputBox.Text .. "\n" .. text
-    end
-end
-
-clearBtn.MouseButton1Click:Connect(function()
-    outputBox.Text = ""
-end)
-
--- Окно копирования (нижняя часть)
-local copyBox = Instance.new("TextBox")
-copyBox.Size = UDim2.new(1, -20, 0.5, -30)
-copyBox.Position = UDim2.new(0, 10, 0.5, 10)
-copyBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-copyBox.BorderSizePixel = 0
-copyBox.TextEditable = true
-copyBox.MultiLine = true
-copyBox.ClearTextOnFocus = false
-copyBox.TextWrapped = true
-copyBox.Font = Enum.Font.Code
-copyBox.TextSize = 14
-copyBox.TextXAlignment = Enum.TextXAlignment.Left
-copyBox.TextYAlignment = Enum.TextYAlignment.Top
-copyBox.TextColor3 = Color3.fromRGB(200, 255, 200)
-copyBox.Text = ""
-copyBox.Parent = main
-
-copyBtn.MouseButton1Click:Connect(function()
-    copyBox.Text = outputBox.Text
-    -- дальше просто Ctrl+A / Ctrl+C в copyBox
-end)
-
---------------------------------------------------
--- Ресайз окна (правый‑нижний угол, без сдвига)
---------------------------------------------------
-
-local resizeHandle = Instance.new("Frame")
-resizeHandle.Size = UDim2.new(0, 14, 0, 14)
-resizeHandle.Position = UDim2.new(1, -14, 1, -14)
-resizeHandle.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-resizeHandle.BorderSizePixel = 0
-resizeHandle.Parent = main
-
-local resizing = false
-local resizeStartMouse
-local resizeStartSize
-
-resizeHandle.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        resizing = true
-        resizeStartMouse = UIS:GetMouseLocation()
-        resizeStartSize = main.Size
-    end
-end)
-
-resizeHandle.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        resizing = false
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local current = UIS:GetMouseLocation()
-        local delta = current - resizeStartMouse
-
-        local newW = math.max(360, resizeStartSize.X.Offset + delta.X)
-        local newH = math.max(240, resizeStartSize.Y.Offset + delta.Y)
-        main.Size = UDim2.new(0, newW, 0, newH)
-        -- позиция main не меняется, только размер
-    end
-end)
-
---------------------------------------------------
--- Логика сканирования PlaytimeRewards
---------------------------------------------------
-
-local running = false
-
-local function startScanner()
-    if running then return end
-    running = true
-    startBtn.Text = "Stop Playtime Debug"
-    startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
-
-    appendLine("[Start] Playtime debug started")
-
+local function startAutoClickPlaytimeRewards()
     local ok, err = pcall(function()
         local pg = LocalPlayer:WaitForChild("PlayerGui")
         local mainUi = pg:WaitForChild("Main_User_Interface")
         local rewardsRoot = mainUi:WaitForChild("Rewards")
         local playtime = rewardsRoot:WaitForChild("PlaytimeRewards")
-
         local rewardsFolder = playtime:FindFirstChild("Rewards") or playtime
-
-        appendLine("[Info] Using folder: " .. rewardsFolder.Name)
 
         local rewardButtons = {}
 
@@ -226,72 +19,55 @@ local function startScanner()
                 if btn and btn:IsA("GuiButton") then
                     local txtLabel = btn:FindFirstChild("Frame") and btn.Frame:FindFirstChild("TextLabel")
                     local claimedGui = btn:FindFirstChild("Claimed")
-                    table.insert(rewardButtons, {
-                        Tier    = tierFrame.Name,
-                        Button  = btn,
-                        Label   = txtLabel,
-                        Claimed = claimedGui
-                    })
-                    appendLine(string.format(
-                        "[Found] Tier=%s Label=%s HasClaimed=%s",
-                        tierFrame.Name,
-                        txtLabel and txtLabel.Text or "nil",
-                        tostring(claimedGui ~= nil)
-                    ))
+                    if txtLabel and claimedGui then
+                        table.insert(rewardButtons, {
+                            Tier    = tierFrame.Name,
+                            Button  = btn,
+                            Label   = txtLabel,
+                            Claimed = claimedGui
+                        })
+                    end
                 end
             end
         end
 
         if #rewardButtons == 0 then
-            appendLine("[Warn] No reward buttons found")
+            warn("[AisbergHub][Playtime] Auto-claim: no buttons found")
             return
         end
 
+        print("[AisbergHub][Playtime] Auto-claim started")
+
         task.spawn(function()
-            while running do
-                task.wait(1)
+            while task.wait(2) do
                 for _, info in ipairs(rewardButtons) do
                     local btn     = info.Button
                     local lbl     = info.Label
                     local claimed = info.Claimed
 
-                    if btn and btn.Parent and btn.Parent.Visible and btn.Visible then
-                        local text = lbl and lbl.Text or "nil"
-                        local claimedVisible = claimed and claimed.Visible or false
-                        local line = string.format(
-                            "[State] Tier=%s Text=%s Claimed.Visible=%s Active=%s",
-                            info.Tier,
-                            text,
-                            tostring(claimedVisible),
-                            tostring(btn.Active)
-                        )
-                        appendLine(line)
+                    if not (btn and btn.Parent and btn.Parent.Visible and btn.Visible and btn.Active ~= false) then
+                        continue
+                    end
+
+                    local text = lbl.Text
+                    local claimedVisible = claimed.Visible
+
+                    -- готово к получению: Claim + Claimed.Visible=false
+                    if text == "Claim" and not claimedVisible then
+                        print("[AisbergHub][Playtime] Auto-claiming", info.Tier)
+                        pcall(function()
+                            btn:Activate()
+                        end)
                     end
                 end
             end
-            appendLine("[Stop] Playtime debug stopped")
         end)
     end)
 
     if not ok then
-        appendLine("[Error] Init: " .. tostring(err))
-        running = false
-        startBtn.Text = "Start Playtime Debug"
-        startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
+        warn("[AisbergHub][Playtime] Auto-claim init error:", err)
     end
 end
 
-local function stopScanner()
-    if not running then return end
-    running = false
-    startBtn.Text = "Start Playtime Debug"
-    startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-end
-
-startBtn.MouseButton1Click:Connect(function()
-    if running then
-        stopScanner()
-    else
-        startScanner()
-    end
-end)
+-- один раз из твоего основного скрипта:
+startAutoClickPlaytimeRewards()
