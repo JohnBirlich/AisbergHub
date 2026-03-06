@@ -5,7 +5,7 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
--- Welcome Logic
+-- Welcome logic
 --------------------------------------------------
 
 local function showWelcomeAndThen(callback)
@@ -43,7 +43,7 @@ local function showWelcomeAndThen(callback)
     title.TextXAlignment = Enum.TextXAlignment.Center
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextTransparency = 1
-    title.Text = "WELCOME TO AISBERG HUB!!"
+    title.Text = "WELCOME TO AISBERG HUB!"
     title.Parent = frame
 
     local desc = Instance.new("TextLabel")
@@ -84,7 +84,7 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Список материалов и цвет (ForceField по умолчанию)
+-- Material list and color (ForceField default)
 --------------------------------------------------
 
 local MATERIAL_NAMES = {
@@ -102,7 +102,7 @@ local rInput, gInput, bInput
 local function getSelectedMaterial()
     local mat = Enum.Material[selectedMaterialName]
     if not mat then
-        warn("[VisualCarChanger] Enum.Material." .. tostring(selectedMaterialName) .. " not found, fallback to Plastic")
+        warn("[VisualCarChanger] Enum.Material." .. tostring(selectedMaterialName) .. " not found, falling back to Plastic")
         return Enum.Material.Plastic
     end
     return mat
@@ -125,7 +125,7 @@ local function getSelectedColor()
 end
 
 --------------------------------------------------
--- Поиск машины текущего игрока
+-- Find current player's car
 --------------------------------------------------
 
 local function getPlayerCarModel()
@@ -152,7 +152,7 @@ local function getPlayerCarModel()
 end
 
 --------------------------------------------------
--- Применение материала/цвета к машине
+-- Apply material and color to car
 --------------------------------------------------
 
 local function applyMaterialToCar()
@@ -200,6 +200,11 @@ local function createVisualCarChangerGui()
     frame.Draggable = true
     frame.Parent = screenGui
 
+    -- Rounded corners for main menu
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 8)
+    mainCorner.Parent = frame
+
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(1, 0, 0, 24)
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -226,7 +231,7 @@ local function createVisualCarChangerGui()
     end)
 
     --------------------------------------------------
-    -- RGB ввод
+    -- RGB input
     --------------------------------------------------
 
     local rgbLabel = Instance.new("TextLabel")
@@ -277,7 +282,7 @@ local function createVisualCarChangerGui()
     bInput.Parent = frame
 
     --------------------------------------------------
-    -- Список материалов
+    -- Material list
     --------------------------------------------------
 
     local matLabel = Instance.new("TextLabel")
@@ -339,7 +344,7 @@ local function createVisualCarChangerGui()
     end
 
     --------------------------------------------------
-    -- Apply Button
+    -- Apply button
     --------------------------------------------------
 
     local applyBtn = Instance.new("TextButton")
@@ -353,13 +358,17 @@ local function createVisualCarChangerGui()
     applyBtn.TextSize = 14
     applyBtn.Parent = frame
 
+    local applyCorner = Instance.new("UICorner")
+    applyCorner.CornerRadius = UDim.new(0, 6)
+    applyCorner.Parent = applyBtn
+
     applyBtn.MouseButton1Click:Connect(function()
         applyMaterialToCar()
     end)
 end
 
 --------------------------------------------------
--- Старт
+-- Start
 --------------------------------------------------
 
 showWelcomeAndThen(createVisualCarChangerGui)
