@@ -10,6 +10,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
+print("AisbergHub LocalScript loaded")
+
 --------------------------------------------------
 -- Welcome баннер
 --------------------------------------------------
@@ -86,11 +88,15 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Основной GUI (создаём через welcome)
+-- Основной GUI (создаётся после welcome)
 --------------------------------------------------
 
 local function createMainGui()
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+    --------------------------------------------------
+    -- Anti AFK
+    --------------------------------------------------
 
     warn("Anti AFK launching")
     LocalPlayer.Idled:Connect(function()
@@ -99,6 +105,10 @@ local function createMainGui()
         vu:CaptureController()
         vu:ClickButton2(Vector2.new())
     end)
+
+    --------------------------------------------------
+    -- GUI
+    --------------------------------------------------
 
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MidnightChasersGui"
@@ -414,7 +424,7 @@ local function createMainGui()
     --------------------------------------------------
 
     local race1Frames = {
-        -- вставь сюда свой полный список CFrame
+        -- сюда вставь свой полный список CFrame для Race1
         CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
         -- ...
         CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
