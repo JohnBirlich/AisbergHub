@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (норм drag/resize, разделённый output) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (стабильный drag/resize, разделённый output) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -57,7 +57,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Playtime Rewards"
+    desc.Text = "Midnight Chasers • Debug • City Highway Race • Playtime Rewards"
     desc.Parent = frame
 
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -98,7 +98,7 @@ local function createPlaytimeDebugWindow()
     main.Parent = debugGui
 
     --------------------------------------------------
-    -- DRAG (устойчивый вариант с dragInput)
+    -- DRAG (устойчивый шаблон)
     --------------------------------------------------
 
     local dragging = false
