@@ -1,5 +1,5 @@
 -- Midnight Chasers GUI:
--- Autofarm + Auto City Highway Race 🏁 + Anti AFK
+-- Autofarm + Auto Races 🏁 + Anti AFK
 -- AisbergHub
 
 local Players           = game:GetService("Players")
@@ -36,8 +36,8 @@ screenGui.Parent = PlayerGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 260, 0, 300) -- чуть больше под 4 кнопки гонок
-mainFrame.Position = UDim2.new(0, 20, 0.5, -150)
+mainFrame.Size = UDim2.new(0, 260, 0, 320) -- удлинил, чтобы все кнопки влезли
+mainFrame.Position = UDim2.new(0, 20, 0.5, -160)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
@@ -343,7 +343,7 @@ local farmFrames = {
 --------------------------------------------------
 
 local race1Frames = {
-    -- твой полный список CFrame для Race1
+    -- твой полный список CFrame здесь
     CFrame.new(3322.75391, -2.98221874, 856.207031, 0.961249948, 0, -0.275678426, 0, 1, 0, 0.275678426, 0, 0.961249948),
     -- ...
     CFrame.new(-16520.5859, 23.4347839, 12137.5049, 0.156420708, 0.0034087766, 0.987684667, -0.0217956547, 0.999762475, 0, -0.987450063, -0.0215274431, 0.156457841)
@@ -351,7 +351,6 @@ local race1Frames = {
 
 --------------------------------------------------
 -- Заготовки маршрутов Race2–Race4
--- позже сюда вставим таблицы CFrame, как для race1Frames
 --------------------------------------------------
 
 local race2Frames = {}
@@ -474,7 +473,7 @@ local function startSoloForRace(raceName)
 end
 
 --------------------------------------------------
--- Teleport к старту Race1 (остальные сделаем позже)
+-- Teleport к старту Race1
 --------------------------------------------------
 
 local function teleportToRace1Start()
@@ -574,14 +573,12 @@ local function runRace1Route()
 end
 
 --------------------------------------------------
--- Заглушки Auto Rainbow Bridge Sprint / Dojo / Rainbow Rinkai Dojo
--- позже сюда добавим телепорты и использование race2Frames/race3Frames/race4Frames
+-- Заглушки Race2–Race4
 --------------------------------------------------
 
 local function runRace2Route()
     race2Running = true
     print("[AisbergHub] Auto Rainbow Bridge Sprint loop (Race2) not implemented yet")
-    -- TODO: заполнить race2Frames и логику, аналогичную runRace1Route
     task.wait(1)
     race2Running = false
 end
@@ -589,7 +586,6 @@ end
 local function runRace3Route()
     race3Running = true
     print("[AisbergHub] Auto Dojo Sprint loop (Race3) not implemented yet")
-    -- TODO: заполнить race3Frames и логику, аналогичную runRace1Route
     task.wait(1)
     race3Running = false
 end
@@ -597,7 +593,6 @@ end
 local function runRace4Route()
     race4Running = true
     print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) not implemented yet")
-    -- TODO: заполнить race4Frames и логику, аналогичную runRace1Route
     task.wait(1)
     race4Running = false
 end
@@ -623,7 +618,7 @@ race1Btn.Position = UDim2.new(0, 10, 0, 175)
 race1Btn.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
 race1Btn.BorderSizePixel = 0
 race1Btn.Font = Enum.Font.GothamBold
-race1Btn.Text = "Auto City Highway Race 🏁 (Race1)"
+race1Btn.Text = "Auto City Highway Race 🏁"
 race1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 race1Btn.TextSize = 13
 race1Btn.Parent = mainFrame
@@ -634,7 +629,7 @@ race2Btn.Position = UDim2.new(0, 10, 0, 210)
 race2Btn.BackgroundColor3 = Color3.fromRGB(80, 120, 150)
 race2Btn.BorderSizePixel = 0
 race2Btn.Font = Enum.Font.GothamBold
-race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁 (Race2)"
+race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
 race2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 race2Btn.TextSize = 11
 race2Btn.Parent = mainFrame
@@ -645,7 +640,7 @@ race3Btn.Position = UDim2.new(0, 10, 0, 245)
 race3Btn.BackgroundColor3 = Color3.fromRGB(80, 150, 120)
 race3Btn.BorderSizePixel = 0
 race3Btn.Font = Enum.Font.GothamBold
-race3Btn.Text = "Auto Dojo Sprint 🏁 (Race3)"
+race3Btn.Text = "Auto Dojo Sprint 🏁"
 race3Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 race3Btn.TextSize = 12
 race3Btn.Parent = mainFrame
@@ -656,9 +651,9 @@ race4Btn.Position = UDim2.new(0, 10, 0, 280)
 race4Btn.BackgroundColor3 = Color3.fromRGB(110, 80, 150)
 race4Btn.BorderSizePixel = 0
 race4Btn.Font = Enum.Font.GothamBold
-race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁 (Race4)"
+race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
 race4Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-race4Btn.TextSize = 10
+race4Btn.TextSize = 9
 race4Btn.Parent = mainFrame
 
 autofarmBtn.MouseButton1Click:Connect(function()
@@ -686,11 +681,11 @@ race1Btn.MouseButton1Click:Connect(function()
     if autofarmRunning or race2Running or race3Running or race4Running then return end
     if not race1Running then
         race1Running = true
-        race1Btn.Text = "Stop Auto City Highway Race 🏁 (Race1)"
+        race1Btn.Text = "Stop City Highway Race 🏁"
         print("[AisbergHub] Auto City Highway Race started")
         task.spawn(function()
             runRace1Route()
-            race1Btn.Text = "Auto City Highway Race 🏁 (Race1)"
+            race1Btn.Text = "Auto City Highway Race 🏁"
             print("[AisbergHub] Auto City Highway Race stopped")
         end)
     else
@@ -710,10 +705,10 @@ race2Btn.MouseButton1Click:Connect(function()
     if autofarmRunning or race1Running or race3Running or race4Running then return end
     if not race2Running then
         race2Running = true
-        race2Btn.Text = "Stop Rainbow Bridge Sprint 🏁 (Race2)"
+        race2Btn.Text = "Stop Rainbow Bridge Sprint 🏁"
         task.spawn(function()
             runRace2Route()
-            race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁 (Race2)"
+            race2Btn.Text = "Auto Rainbow Bridge Sprint 🏁"
         end)
     else
         race2Running = false
@@ -727,10 +722,10 @@ race3Btn.MouseButton1Click:Connect(function()
     if autofarmRunning or race1Running or race2Running or race4Running then return end
     if not race3Running then
         race3Running = true
-        race3Btn.Text = "Stop Dojo Sprint 🏁 (Race3)"
+        race3Btn.Text = "Stop Dojo Sprint 🏁"
         task.spawn(function()
             runRace3Route()
-            race3Btn.Text = "Auto Dojo Sprint 🏁 (Race3)"
+            race3Btn.Text = "Auto Dojo Sprint 🏁"
         end)
     else
         race3Running = false
@@ -744,10 +739,10 @@ race4Btn.MouseButton1Click:Connect(function()
     if autofarmRunning or race1Running or race2Running or race3Running then return end
     if not race4Running then
         race4Running = true
-        race4Btn.Text = "Stop Rainbow Rinkai Dojo Sprint 🏁 (Race4)"
+        race4Btn.Text = "Stop Rainbow Rinkai Dojo Sprint 🏁"
         task.spawn(function()
             runRace4Route()
-            race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁 (Race4)"
+            race4Btn.Text = "Auto Rainbow Rinkai Dojo Sprint 🏁"
         end)
     else
         race4Running = false
