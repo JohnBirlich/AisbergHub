@@ -1,4 +1,4 @@
--- === AisbergHub Welcome (fade) + Race2 CFrame Debug (DownforceF -> inner Parts of 1..70/Finish) ===
+-- === AisbergHub Welcome (fade) + Chekings CFrame Dump (drag/resize, разделённый output, FPS/Mem/Ping/Country) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -60,7 +60,7 @@ local function showWelcomeAndThen(callback)
     desc.TextXAlignment = Enum.TextXAlignment.Center
     desc.TextColor3 = Color3.fromRGB(200, 200, 200)
     desc.TextTransparency = 1
-    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Race2 CFrame Logger"
+    desc.Text = "Midnight Chasers • Autofarm • City Highway Race • Chekings CFrame Dump"
     desc.Parent = frame
 
     local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -84,12 +84,12 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Race2 CFrame Debug Window
+-- Chekings CFrame Debug Window
 --------------------------------------------------
 
 local function createPlaytimeDebugWindow()
     local debugGui = Instance.new("ScreenGui")
-    debugGui.Name = "AisbergHub_Race2CFrameDebug"
+    debugGui.Name = "AisbergHub_ChekingsCFrameDebug"
     debugGui.ResetOnSpawn = false
     debugGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -128,7 +128,7 @@ local function createPlaytimeDebugWindow()
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BorderSizePixel = 0
     title.Font = Enum.Font.GothamBold
-    title.Text = "AisbergHub • Race2 CFrame Debug"
+    title.Text = "AisbergHub • Chekings CFrame Debug"
     title.TextSize = 14
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -173,7 +173,7 @@ local function createPlaytimeDebugWindow()
     startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
     startBtn.BorderSizePixel = 0
     startBtn.Font = Enum.Font.GothamBold
-    startBtn.Text = "Start Race2 CFrame Debug"
+    startBtn.Text = "Dump Chekings CFrames"
     startBtn.TextSize = 14
     startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     startBtn.Parent = main
@@ -464,27 +464,14 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Логика: DownforceF касается внутренних Part чекпоинтов Race2
+    -- Dump Chekings CFrames
     --------------------------------------------------
-
-    local running = false
-    local connections = {}
-    local touchedOnce = {}
-
-    local function disconnectAll()
-        for _, conn in ipairs(connections) do
-            if conn.Connected then
-                conn:Disconnect()
-            end
-        end
-        table.clear(connections)
-    end
 
     local function formatCFrameLine(idx, cf)
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() [web:563][web:574]
+        r20, r21, r22 = cf:GetComponents() -- порядок x,y,z,r00..r22[web:563][web:574][web:565]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
@@ -504,118 +491,55 @@ local function createPlaytimeDebugWindow()
         )
     end
 
-    -- ищем, к какому контейнеру "1..70/Finish" принадлежит hitPart
-    local function resolveCheckpointIndexFromHit(hit, rootInstance)
-        local current = hit
-        while current and current ~= rootInstance do
-            local name = current.Name
-            local idx = tonumber(name)
-            local isFinish = (name == "Finish")
-            if (idx and idx >= 1 and idx <= 70) or isFinish then
-                return isFinish and 999 or idx, current
-            end
-            current = current.Parent
-        end
-        return nil, nil
-    end
+    local dumping = false
 
-    local function startScanner()
-        if running then return end
-        running = true
-        startBtn.Text = "Stop Race2 CFrame Debug"
+    local function dumpChekings()
+        if dumping then return end
+        dumping = true
+        startBtn.Text = "Dumping..."
         startBtn.BackgroundColor3 = Color3.fromRGB(150, 60, 60)
 
-        appendLine("[Start] Race2 CFrame debug started")
-
-        table.clear(touchedOnce)
-        disconnectAll()
+        appendLine("[Start] Chekings CFrame dump")
 
         local ok, err = pcall(function()
-            -- Workspace > Races > Race2 > Races > Race2_unique code
-            local races = Workspace:WaitForChild("Races")
-            local race2Root = races:WaitForChild("Race2")
-            local race2Races = race2Root:WaitForChild("Races")
+            -- Workspace > Chekings > Checkpoints > 1..70/Finish
+            local chekings = Workspace:WaitForChild("Chekings")
+            local checkpointsInt = chekings:WaitForChild("Checkpoints") -- IntValue по твоему описанию
 
-            -- будем хранить все Race2_* инстансы, чтобы потом по ним искать родителя
-            local raceInstances = {}
-
-            local function registerRaceInstance(instance)
-                if not instance:IsA("Folder") and not instance:IsA("Model") then return end
-                if instance.Name:sub(1, 5) ~= "Race2" then return end
-
-                raceInstances[instance] = true
-                appendLine("[Info] Registered Race2 instance: " .. instance:GetFullName())
-            end
-
-            for _, inst in ipairs(race2Races:GetChildren()) do
-                registerRaceInstance(inst)
-            end
-
-            local raceChildConn = race2Races.ChildAdded:Connect(function(inst)
-                registerRaceInstance(inst)
-            end)
-            table.insert(connections, raceChildConn)
-
-            -- Workspace > bonitoscocos's Car > Body > DownforceF
-            local carModel = Workspace:WaitForChild(LocalPlayer.Name .. "'s Car")
-            local bodyModel = carModel:WaitForChild("Body")
-            local downforce = bodyModel:WaitForChild("DownforceF")
-
-            appendLine("[Info] Using DownforceF: " .. downforce:GetFullName())
-
-            downforce.CanTouch = true -- чтобы Touched работал[web:595][web:597]
-
-            local function onDownforceTouched(hit)
-                if not running then return end
-
-                -- небольшой лог, чтобы убедиться, что вообще что‑то ловим
-                appendLine("[Debug] DownforceF touched: " .. hit:GetFullName())
-
-                -- ищем, принадлежит ли hit одному из Race2_* инстансов и контейнеру 1..70/Finish
-                for raceInst in pairs(raceInstances) do
-                    if hit:IsDescendantOf(raceInst) then
-                        local idx, checkpointContainer = resolveCheckpointIndexFromHit(hit, raceInst)
-                        if idx then
-                            -- берём CFrame самого hit (внутреннего Part), а не контейнера
-                            if not touchedOnce[hit] then
-                                touchedOnce[hit] = true
-                                local line = formatCFrameLine(idx, hit.CFrame)
-                                appendLine(line)
-                            end
-                        end
-                        break
-                    end
+            -- сами части 1..70 и Finish лежат рядом (дети chekings)
+            for i = 1, 70 do
+                local name = tostring(i)
+                local part = chekings:FindFirstChild(name)
+                if part and part:IsA("BasePart") then
+                    local line = formatCFrameLine(i, part.CFrame)
+                    appendLine(line)
+                else
+                    appendLine("[Warn] Part \"" .. name .. "\" not found or not BasePart")
                 end
             end
 
-            local conn = downforce.Touched:Connect(onDownforceTouched)
-            table.insert(connections, conn)
+            local finishPart = chekings:FindFirstChild("Finish")
+            if finishPart and finishPart:IsA("BasePart") then
+                local line = formatCFrameLine(999, finishPart.CFrame)
+                appendLine(line)
+            else
+                appendLine("[Warn] Part \"Finish\" not found or not BasePart")
+            end
         end)
 
         if not ok then
-            appendLine("[Error] Init: " .. tostring(err))
-            running = false
-            startBtn.Text = "Start Race2 CFrame Debug"
-            startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-            disconnectAll()
+            appendLine("[Error] Dump: " .. tostring(err))
+        else
+            appendLine("[Done] Chekings CFrame dump finished")
         end
-    end
 
-    local function stopScanner()
-        if not running then return end
-        running = false
-        startBtn.Text = "Start Race2 CFrame Debug"
+        dumping = false
+        startBtn.Text = "Dump Chekings CFrames"
         startBtn.BackgroundColor3 = Color3.fromRGB(50, 130, 50)
-        appendLine("[Stop] Race2 CFrame debug stopped")
-        disconnectAll()
     end
 
     startBtn.MouseButton1Click:Connect(function()
-        if running then
-            stopScanner()
-        else
-            startScanner()
-        end
+        dumpChekings()
     end)
 end
 
