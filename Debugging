@@ -500,7 +500,7 @@ local function createPlaytimeDebugWindow()
             local chekings = Workspace:WaitForChild("Chekings")
             local checkpointsFolder = chekings:WaitForChild("Checkpoints")
 
-            for i = 1, 70 do
+            for i = 1, 90 do
                 local name = tostring(i)
                 local part = checkpointsFolder:FindFirstChild(name)
                 if part and part:IsA("BasePart") then
