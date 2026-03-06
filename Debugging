@@ -1,9 +1,10 @@
--- === AisbergHub Welcome (fade) + Playtime Debug (отдельный drag/resize, разделённый output) ===
+-- === AisbergHub Welcome (fade) + Playtime Debug (drag/resize, разделённый output, FPS/Mem) ===
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 --------------------------------------------------
 -- Welcome баннер
@@ -97,6 +98,10 @@ local function createPlaytimeDebugWindow()
     main.BorderSizePixel = 0
     main.Parent = debugGui
 
+    -- минимальный размер = стартовый размер
+    local minWidth  = main.Size.X.Offset
+    local minHeight = main.Size.Y.Offset
+
     --------------------------------------------------
     -- DRAG (отдельно)
     --------------------------------------------------
@@ -133,8 +138,8 @@ local function createPlaytimeDebugWindow()
             dragging = true
             dragStartMouse = input.Position
             dragStartPos = main.Position
-            input.Changed:Connect(function(ch)
-                if ch == Enum.UserInputState.End then
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
                 end
             end)
@@ -142,6 +147,10 @@ local function createPlaytimeDebugWindow()
     end)
 
     UIS.InputChanged:Connect(onDragInput)
+
+    --------------------------------------------------
+    -- Кнопки управления
+    --------------------------------------------------
 
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -191,12 +200,45 @@ local function createPlaytimeDebugWindow()
     copyBtn.Parent = main
 
     --------------------------------------------------
+    -- FPS / Memory статус-бар
+    --------------------------------------------------
+
+    local statsLabel = Instance.new("TextLabel")
+    statsLabel.Size = UDim2.new(1, -20, 0, 18)
+    statsLabel.Position = UDim2.new(0, 10, 0, 72)
+    statsLabel.BackgroundTransparency = 1
+    statsLabel.Font = Enum.Font.Code
+    statsLabel.TextSize = 13
+    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    statsLabel.Text = "FPS: ...  |  LuaMem: ..."
+    statsLabel.Parent = main
+
+    local lastUpdate = 0
+    local frameCount = 0
+
+    RunService.RenderStepped:Connect(function(dt)
+        frameCount += 1
+        lastUpdate += dt
+
+        if lastUpdate >= 0.5 then
+            local fps = math.floor(frameCount / lastUpdate + 0.5)
+            local kb = collectgarbage("count") -- в КБ[web:328]
+            local mb = kb / 1024
+            statsLabel.Text = string.format("FPS: %d  |  LuaMem: %.2f MB", fps, mb)
+
+            frameCount = 0
+            lastUpdate = 0
+        end
+    end)
+
+    --------------------------------------------------
     -- Верхняя панель: OUTPUT
     --------------------------------------------------
 
     local topContainer = Instance.new("Frame")
-    topContainer.Size = UDim2.new(1, -20, 0.5, -60)
-    topContainer.Position = UDim2.new(0, 10, 0, 80)
+    topContainer.Size = UDim2.new(1, -20, 0.5, -80) -- чуть ниже из‑за statsLabel
+    topContainer.Position = UDim2.new(0, 10, 0, 100)
     topContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     topContainer.BorderSizePixel = 0
     topContainer.Parent = main
@@ -277,7 +319,7 @@ local function createPlaytimeDebugWindow()
     --------------------------------------------------
 
     local bottomContainer = Instance.new("Frame")
-    bottomContainer.Size = UDim2.new(1, -20, 0.5, -30)
+    bottomContainer.Size = UDim2.new(1, -20, 0.5, -40)
     bottomContainer.Position = UDim2.new(0, 10, 0.5, 10)
     bottomContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     bottomContainer.BorderSizePixel = 0
@@ -341,7 +383,6 @@ local function createPlaytimeDebugWindow()
 
     copyBtn.MouseButton1Click:Connect(function()
         copyBox.Text = logLabel.Text
-        -- Ctrl+A / Ctrl+C в copyBox
     end)
 
     --------------------------------------------------
@@ -378,10 +419,9 @@ local function createPlaytimeDebugWindow()
             local current = UIS:GetMouseLocation()
             local delta = current - resizeStartMouse
 
-            local newW = math.max(420, resizeStartSize.X.Offset + delta.X)
-            local newH = math.max(260, resizeStartSize.Y.Offset + delta.Y)
+            local newW = math.max(minWidth,  resizeStartSize.X.Offset + delta.X)
+            local newH = math.max(minHeight, resizeStartSize.Y.Offset + delta.Y)
             main.Size = UDim2.new(0, newW, 0, newH)
-            -- main.Position не меняем, window не двигается при ресайзе
         end
     end)
 
@@ -453,8 +493,8 @@ local function createPlaytimeDebugWindow()
                                 "[State] Tier=%s Text=%s Claimed.Visible=%s Active=%s",
                                 info.Tier,
                                 text,
-                                tostring(claimedVisible),
-                                tostring(btn.Active)
+                                tostring(claimedVisible)
+                                , tostring(btn.Active)
                             )
                             appendLine(line)
                         end
