@@ -4,7 +4,7 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
--- Материалы и цвет
+-- List of Materials and Color Logiv
 --------------------------------------------------
 
 local MATERIAL_NAMES = {
@@ -22,7 +22,7 @@ local rInput, gInput, bInput
 local function getSelectedMaterial()
     local mat = Enum.Material[selectedMaterialName]
     if not mat then
-        warn("[CarMaterial] Enum.Material." .. tostring(selectedMaterialName) .. " not found, fallback to Plastic")
+        warn("[VisualCarChanger] Enum.Material." .. tostring(selectedMaterialName) .. " not found, fallback to Plastic")
         return Enum.Material.Plastic
     end
     return mat
@@ -45,19 +45,19 @@ local function getSelectedColor()
 end
 
 --------------------------------------------------
--- Поиск машины игрока
+-- Search for players Car
 --------------------------------------------------
 
 local function getPlayerCarModel()
     local char = LocalPlayer.Character
     if not char then
-        warn("[CarMaterial] No character")
+        warn("[VisualCarChanger] No character")
         return nil
     end
 
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum or not hum.SeatPart then
-        warn("[CarMaterial] Player is not in a seat/vehicle")
+        warn("[VisualCarChanger] Player is not in a seat/vehicle")
         return nil
     end
 
@@ -65,7 +65,7 @@ local function getPlayerCarModel()
     -- поднимаемся вверх до Model, которую считаем машиной
     local car = seat:FindFirstAncestorOfClass("Model")
     if not car then
-        warn("[CarMaterial] Vehicle model not found from seat")
+        warn("[VisualCarChanger] Vehicle model not found from seat")
         return nil
     end
 
@@ -73,7 +73,7 @@ local function getPlayerCarModel()
 end
 
 --------------------------------------------------
--- Применить к машине
+-- Apply to car
 --------------------------------------------------
 
 local function applyMaterialToCar()
@@ -85,7 +85,7 @@ local function applyMaterialToCar()
 
         local mat   = getSelectedMaterial()
         local color = getSelectedColor()
-        print("[CarMaterial] Applying", mat.Name, "to", car:GetFullName(), "color", color)
+        print("[VisualCarChanger] Applying", mat.Name, "to", car:GetFullName(), "color", color)
 
         for _, desc in ipairs(car:GetDescendants()) do
             if desc:IsA("Part") or desc:IsA("MeshPart") then
@@ -94,11 +94,11 @@ local function applyMaterialToCar()
             end
         end
 
-        print("[CarMaterial] Done for car:", car.Name)
+        print("[VisualCarChanger] Done for car:", car.Name)
     end)
 
     if not ok then
-        warn("[CarMaterial] Error: " .. tostring(err))
+        warn("[VisualCarChanger] Error: " .. tostring(err))
     end
 end
 
@@ -106,9 +106,9 @@ end
 -- GUI
 --------------------------------------------------
 
-local function createCarMaterialGui()
+local function createVisualCarChangerGui()
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "CarMaterialGui"
+    screenGui.Name = "VisualCarChangerGui"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -126,7 +126,7 @@ local function createCarMaterialGui()
     title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     title.BorderSizePixel = 0
     title.Font = Enum.Font.GothamBold
-    title.Text = "Car Material (your car)"
+    title.Text = "Visual Car Changer by Dan"
     title.TextColor3 = Color3.fromRGB(255, 255, 255)
     title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -147,7 +147,7 @@ local function createCarMaterialGui()
     end)
 
     --------------------------------------------------
-    -- Цвет RGB
+    -- RGB
     --------------------------------------------------
 
     local rgbLabel = Instance.new("TextLabel")
@@ -198,7 +198,7 @@ local function createCarMaterialGui()
     bInput.Parent = frame
 
     --------------------------------------------------
-    -- Список материалов (Scroll)
+    -- Material List
     --------------------------------------------------
 
     local matLabel = Instance.new("TextLabel")
@@ -260,7 +260,7 @@ local function createCarMaterialGui()
     end
 
     --------------------------------------------------
-    -- Кнопка Apply
+    -- Apply Button
     --------------------------------------------------
 
     local applyBtn = Instance.new("TextButton")
@@ -279,8 +279,5 @@ local function createCarMaterialGui()
     end)
 end
 
---------------------------------------------------
--- Старт
---------------------------------------------------
 
-createCarMaterialGui()
+createVisualCarChangerGui()
