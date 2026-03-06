@@ -1215,15 +1215,103 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Заглушки Race2–Race4
+    -- Auto Rainbow Rinkai Dojo Sprint 🏁
     --------------------------------------------------
 
     local function runRace4Route()
+    local ok, err = pcall(function()
         race4Running = true
-        print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) not implemented yet")
-        task.wait(1)
+        print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) started")
+
+        while race4Running do
+            -- 1) ждём, пока игрок сядет в машину
+            while race4Running and not isPlayerInCar() do
+                task.wait(0.2)
+            end
+            if not race4Running then break end
+
+            print("[Race4] Player in car, waiting 5s for manual race start")
+            -- 2) время на нажатие Start в их меню
+            for i = 1, 50 do
+                if not race4Running then break end
+                task.wait(0.1)
+            end
+            if not race4Running then break end
+
+            print("[Race4] Waiting extra 3s for race countdown")
+            -- 3) внутренний отсчёт гонки
+            for i = 1, 30 do
+                if not race4Running then break end
+                task.wait(0.1)
+            end
+            if not race4Running then break end
+
+            -- если успел вылезти из машины — начать заново
+            if not isPlayerInCar() then
+                warn("[runRace4Route] Player left car before route, restarting wait loop")
+                continue
+            end
+
+            -- 4) едем по чекпоинтам
+            local car = getCar()
+            if not car then
+                warn("[runRace4Route] Car not found, restarting wait loop")
+                continue
+            end
+
+            local speed = getSpeed()
+
+            for idx, cf in ipairs(race4Frames) do
+                if not race4Running then
+                    warn("[runRace4Route] race4Running became false during route, breaking")
+                    break
+                end
+                local okTween, tweenErr = pcall(function()
+                    tweenRace(car, cf, speed)
+                end)
+                if not okTween then
+                    warn("[runRace4Route] tweenRace error at index " .. idx .. ": " .. tostring(tweenErr))
+                    break
+                end
+                -- если вдруг решишь добавить несколько кругов подряд – тут можно проверять idx
+            end
+
+            if not race4Running then break end
+
+            -- 5) возвращаем машину к RACE4_RETURN_CF
+            print("[Race4] Returning to Race4 return point")
+            local okBack, backErr = pcall(function()
+                tweenRace(car, RACE4_RETURN_CF, speed)
+            end)
+            if not okBack then
+                warn("[runRace4Route] Error while returning to Race4 return: " .. tostring(backErr))
+            end
+
+            if not race4Running then break end
+
+            -- 6) пауза перед следующим кругом
+            print("[Race4] Lap finished, waiting 5s before next cycle")
+            for i = 1, 50 do
+                if not race4Running then break end
+                task.wait(0.1)
+            end
+        end
+
+        if currentTween then
+            currentTween:Cancel()
+        end
+
+        print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) exited")
+    end)
+
+    if not ok then
+        warn("[runRace4Route] Error: " .. tostring(err))
         race4Running = false
+        if currentTween then
+            currentTween:Cancel()
+        end
     end
+end
 
     --------------------------------------------------
     -- Кнопки
