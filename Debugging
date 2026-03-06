@@ -236,10 +236,8 @@ local function createPlaytimeDebugWindow()
 
         if lastUpdate >= 0.5 then
             local fps = math.floor(frameCount / lastUpdate + 0.5)
-
             local kb = collectgarbage("count")
             local mb = kb / 1024
-
             local pingSec = LocalPlayer:GetNetworkPing() or 0
             local pingMs = math.floor(pingSec * 2000)
 
@@ -257,11 +255,11 @@ local function createPlaytimeDebugWindow()
     end)
 
     --------------------------------------------------
-    -- Верхняя панель: OUTPUT (фиксированный размер + Canvas по строкам)
+    -- Верхняя панель: OUTPUT (пропорционально окну)
     --------------------------------------------------
 
     local topContainer = Instance.new("Frame")
-    topContainer.Size = UDim2.new(1, -20, 0, 140)
+    topContainer.Size = UDim2.new(1, -20, 0.45, -80)
     topContainer.Position = UDim2.new(0, 10, 0, 100)
     topContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     topContainer.BorderSizePixel = 0
@@ -312,7 +310,7 @@ local function createPlaytimeDebugWindow()
     logLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
     logLabel.Parent = topScroll
 
-    local function updateTopCanvasByLines()
+    local function updateTopCanvas()
         local text = logLabel.Text
         local lineCount = 1
         if text ~= "" then
@@ -325,21 +323,16 @@ local function createPlaytimeDebugWindow()
         topScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
-    logLabel:GetPropertyChangedSignal("Text"):Connect(function()
-        updateTopCanvasByLines()
-    end)
-
-    topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateTopCanvasByLines()
-    end)
+    logLabel:GetPropertyChangedSignal("Text"):Connect(updateTopCanvas)
+    topScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateTopCanvas)
 
     --------------------------------------------------
     -- Нижняя панель: COPY OUTPUT
     --------------------------------------------------
 
     local bottomContainer = Instance.new("Frame")
-    bottomContainer.Size = UDim2.new(1, -20, 0, 140)
-    bottomContainer.Position = UDim2.new(0, 10, 0, 100 + 140 + 10)
+    bottomContainer.Size = UDim2.new(1, -20, 0.45, -40)
+    bottomContainer.Position = UDim2.new(0, 10, 0.55, 10)
     bottomContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     bottomContainer.BorderSizePixel = 0
     bottomContainer.Parent = main
@@ -392,7 +385,7 @@ local function createPlaytimeDebugWindow()
     copyBox.Text = ""
     copyBox.Parent = bottomScroll
 
-    local function updateBottomCanvasByLines()
+    local function updateBottomCanvas()
         local text = copyBox.Text
         local lineCount = 1
         if text ~= "" then
@@ -405,13 +398,8 @@ local function createPlaytimeDebugWindow()
         bottomScroll.CanvasSize = UDim2.new(0, 0, 0, canvasY)
     end
 
-    copyBox:GetPropertyChangedSignal("Text"):Connect(function()
-        updateBottomCanvasByLines()
-    end)
-
-    bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        updateBottomCanvasByLines()
-    end)
+    copyBox:GetPropertyChangedSignal("Text"):Connect(updateBottomCanvas)
+    bottomScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateBottomCanvas)
 
     copyBtn.MouseButton1Click:Connect(function()
         copyBox.Text = logLabel.Text
@@ -465,7 +453,7 @@ local function createPlaytimeDebugWindow()
         local x, y, z,
         r00, r01, r02,
         r10, r11, r12,
-        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:563][web:574][web:565]
+        r20, r21, r22 = cf:GetComponents() -- x,y,z,r00..r22[web:574][web:630][web:565]
 
         return string.format(
             "%d - %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s",
