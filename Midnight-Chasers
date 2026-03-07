@@ -321,6 +321,73 @@ local function createMainGui()
     end
 
     --------------------------------------------------
+    -- Wheel hide/restore for tweening
+    --------------------------------------------------
+
+    local function hideCarWheels(car)
+        local ok, err = pcall(function()
+            -- создаём общий backup для колёс
+            if not ReplicatedStorage:FindFirstChild("WheelBackup") then
+                local folder = Instance.new("Folder")
+                folder.Name = "WheelBackup"
+                folder.Parent = ReplicatedStorage
+            end
+            local backup = ReplicatedStorage:FindFirstChild("WheelBackup")
+
+            -- индивидуальная папка под конкретную машину
+            local carFolderName = "Wheels_" .. (car.Name or "Car")
+            local carFolder = backup:FindFirstChild(carFolderName)
+            if carFolder then
+                carFolder:ClearAllChildren()
+            else
+                carFolder = Instance.new("Folder")
+                carFolder.Name = carFolderName
+                carFolder.Parent = backup
+            end
+
+            -- ищем колёса по имени/папке; при необходимости допиши свои условия
+            for _, part in ipairs(car:GetDescendants()) do
+                if part:IsA("BasePart") and (part.Name:lower():find("wheel") or part.Name:lower():find("rim")) then
+                    -- сохраняем исходный Anchored/CanCollide
+                    part:SetAttribute("OrigAnchored", part.Anchored)
+                    part:SetAttribute("OrigCanCollide", part.CanCollide)
+
+                    -- клонируем в backup (на всякий случай, если позже захочешь пересобирать)
+                    local clone = part:Clone()
+                    clone.Parent = carFolder
+
+                    -- временно «отключаем» колесо, но не трогаем weld/constraints
+                    part.Anchored = true
+                    part.CanCollide = false
+                    part.Transparency = 1
+                end
+            end
+        end)
+        if not ok then
+            warn("[hideCarWheels] Error:", err)
+        end
+    end
+
+    local function restoreCarWheels(car)
+        local ok, err = pcall(function()
+            for _, part in ipairs(car:GetDescendants()) do
+                if part:IsA("BasePart") and (part.Name:lower():find("wheel") or part.Name:lower():find("rim")) then
+                    local a = part:GetAttribute("OrigAnchored")
+                    local c = part:GetAttribute("OrigCanCollide")
+
+                    if a ~= nil then part.Anchored = a end
+                    if c ~= nil then part.CanCollide = c end
+
+                    part.Transparency = 0
+                end
+            end
+        end)
+        if not ok then
+            warn("[restoreCarWheels] Error:", err)
+        end
+    end
+
+    --------------------------------------------------
     -- Платформы
     --------------------------------------------------
 
@@ -893,109 +960,119 @@ local function createMainGui()
     --------------------------------------------------
 
     local function runRace1Loop()
-        local ok, err = pcall(function()
-            race1Running = true
-            print("[AisbergHub] Auto City Highway Race loop started")
+    local ok, err = pcall(function()
+        race1Running = true
+        print("[AisbergHub] Auto City Highway Race loop started")
 
-            while race1Running do
-                -- 1) ждём, пока игрок сядет в машину (где угодно)
-                while race1Running and not isPlayerInCar() do
-                    task.wait(0.2)
-                end
+        while race1Running do
+            -- 1) ждём, пока игрок сядет в машину (где угодно)
+            while race1Running and not isPlayerInCar() do
+                task.wait(0.2)
+            end
+            if not race1Running then break end
+
+            print("[AisbergHub] Player in car, waiting 5s for manual race start")
+
+            -- 2) даём 5 секунд, чтобы ты успел нажать Start в их меню
+            for i = 1, 50 do
                 if not race1Running then break end
+                task.wait(0.1)
+            end
+            if not race1Running then break end
 
-                print("[AisbergHub] Player in car, waiting 5s for manual race start")
-
-                -- 2) даём 5 секунд, чтобы ты успел нажать Start в их меню
-                for i = 1, 50 do
-                    if not race1Running then break end
-                    task.wait(0.1)
-                end
+            -- 3) ещё 3 секунды на внутренний отсчёт гонки
+            print("[AisbergHub] Waiting extra 3s for race countdown")
+            for i = 1, 30 do
                 if not race1Running then break end
+                task.wait(0.1)
+            end
+            if not race1Running then break end
 
-                -- 3) ещё 3 секунды на внутренний отсчёт гонки
-                print("[AisbergHub] Waiting extra 3s for race countdown")
-                for i = 1, 30 do
-                    if not race1Running then break end
-                    task.wait(0.1)
+            -- если за это время ты вылез из машины — начинаем цикл заново
+            if not isPlayerInCar() then
+                warn("[runRace1Loop] Player left car before route, restarting wait loop")
+                continue
+            end
+
+            -- 4) получаем машину и едем круг
+            local car = getCar()
+            if not car then
+                warn("[runRace1Loop] Car not found, restarting wait loop")
+                continue
+            end
+
+            -- ВКЛЮЧАЕМ защиту колёс
+            hideCarWheels(car)
+
+            local speed = getSpeed()
+
+            for idx, cf in ipairs(race1Frames) do
+                if not race1Running then
+                    warn("[runRace1Loop] race1Running became false during route, breaking")
+                    break
                 end
-                if not race1Running then break end
-
-                -- если за это время ты вылез из машины — начинаем цикл заново
-                if not isPlayerInCar() then
-                    warn("[runRace1Loop] Player left car before route, restarting wait loop")
-                    continue
-                end
-
-                -- 4) получаем машину и едем круг
-                local car = getCar()
-                if not car then
-                    warn("[runRace1Loop] Car not found, restarting wait loop")
-                    continue
-                end
-
-                local speed = getSpeed()
-
-                for idx, cf in ipairs(race1Frames) do
-                    if not race1Running then
-                        warn("[runRace1Loop] race1Running became false during route, breaking")
-                        break
-                    end
-                    local okTween, tweenErr = pcall(function()
-                        tweenRace(car, cf, speed)
-                    end)
-                    if not okTween then
-                        warn("[runRace1Loop] tweenRace error at index " .. idx .. ": " .. tostring(tweenErr))
-                        break
-                    end
-                    if idx == #race1Frames then
-                        break
-                    end
-                end
-
-                if not race1Running then break end
-
-                -- 5) возвращаем машину на стартовый CFrame
-                print("[AisbergHub] Returning to Race1 start")
-                local okBack, backErr = pcall(function()
-                    tweenRace(car, RACE1_START_CF, speed)
+                local okTween, tweenErr = pcall(function()
+                    tweenRace(car, cf, speed)
                 end)
-                if not okBack then
-                    warn("[runRace1Loop] Error while returning to start: " .. tostring(backErr))
+                if not okTween then
+                    warn("[runRace1Loop] tweenRace error at index " .. idx .. ": " .. tostring(tweenErr))
+                    break
                 end
+                if idx == #race1Frames then
+                    break
+                end
+            end
 
+            if not race1Running then
+                -- перед выходом обязательно вернуть колёса
+                restoreCarWheels(car)
+                break
+            end
+
+            -- 5) возвращаем машину на стартовый CFrame
+            print("[AisbergHub] Returning to Race1 start")
+            local okBack, backErr = pcall(function()
+                tweenRace(car, RACE1_START_CF, speed)
+            end)
+            if not okBack then
+                warn("[runRace1Loop] Error while returning to start: " .. tostring(backErr))
+            end
+
+            -- ВОЗВРАЩАЕМ колёса после полного круга + возврата
+            restoreCarWheels(car)
+
+            if not race1Running then break end
+
+            -- 6) после круга — пауза 5 секунд и всё по кругу
+            print("[AisbergHub] Lap finished, waiting 5s before next cycle")
+            for i = 1, 50 do
                 if not race1Running then break end
-
-                -- 6) после круга — пауза 5 секунд и всё по кругу
-                print("[AisbergHub] Lap finished, waiting 5s before next cycle")
-                for i = 1, 50 do
-                    if not race1Running then break end
-                    task.wait(0.1)
-                end
-            end
-
-            if currentTween then
-                currentTween:Cancel()
-            end
-            if _G.raceGround then
-                _G.raceGround:Destroy()
-                _G.raceGround = nil
-            end
-
-            print("[AisbergHub] Auto City Highway Race loop exited")
-        end)
-        if not ok then
-            warn("[runRace1Loop] Error: " .. tostring(err))
-            race1Running = false
-            if currentTween then
-                currentTween:Cancel()
-            end
-            if _G.raceGround then
-                _G.raceGround:Destroy()
-                _G.raceGround = nil
+                task.wait(0.1)
             end
         end
+
+        if currentTween then
+            currentTween:Cancel()
+        end
+        if _G.raceGround then
+            _G.raceGround:Destroy()
+            _G.raceGround = nil
+        end
+
+        print("[AisbergHub] Auto City Highway Race loop exited")
+    end)
+    if not ok then
+        warn("[runRace1Loop] Error: " .. tostring(err))
+        race1Running = false
+        if currentTween then
+            currentTween:Cancel()
+        end
+        if _G.raceGround then
+            _G.raceGround:Destroy()
+            _G.raceGround = nil
+        end
     end
+end
 
     --------------------------------------------------
     -- Auto Rainbow Bridge Sprint 🏁
