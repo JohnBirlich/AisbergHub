@@ -979,24 +979,15 @@ end
                 _G.raceGround = nil
             end
     
-            -- возвращаем карту после гонки
-            restoreWorkspaceObjects()
-    
-            print("[AisbergHub] Auto City Highway Race loop exited")
-        end)
-        if not ok then
-            warn("[runRace1Loop] Error: " .. tostring(err))
-            race1Running = false
             if currentTween then
                 currentTween:Cancel()
             end
-            if _G.raceGround then
-                _G.raceGround:Destroy()
-                _G.raceGround = nil
-            end
-    
-            -- возвращаем карту и при ошибке
             restoreWorkspaceObjects()
+            print("[AisbergHub] Autofarm loop exited")
+        end)
+        if not ok then
+            warn("[runRace1Loop] Error:", err)
+            autofarmRunning = false
         end
     end
     
