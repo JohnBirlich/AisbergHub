@@ -351,7 +351,7 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Tweens
+    -- Твины
     --------------------------------------------------
 
     local currentTween
@@ -376,13 +376,9 @@ local function createMainGui()
 
             cfValue.Changed:Connect(function()
                 local pos = cfValue.Value.Position
-
-                -- keep helper ground under the car
                 _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
-
-                -- smoothly pivot car to tweened CFrame (no manual velocity)
-                local newCFrame = CFrame.new(_G.farmGround.Position + Vector3.new(0, 7, 0), targetPos)
-                car:PivotTo(newCFrame)
+                car:PivotTo(CFrame.new(_G.farmGround.Position + Vector3.new(0, 7, 0), targetPos))
+                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
             end)
 
             if currentTween then
@@ -420,14 +416,9 @@ local function createMainGui()
 
             cfValue.Changed:Connect(function()
                 local pos = cfValue.Value.Position
-
                 _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 2, pos.Z)
-
-                local newCFrame = CFrame.new(
-                    Vector3.new(pos.X, targetPos.Y + 1, pos.Z),
-                    targetPos
-                )
-                car:PivotTo(newCFrame)
+                car:PivotTo(CFrame.new(Vector3.new(pos.X, targetPos.Y + 1, pos.Z), targetPos))
+                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
             end)
 
             if currentTween then
