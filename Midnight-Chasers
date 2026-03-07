@@ -907,6 +907,7 @@ local function createMainGui()
 local function runRace1Loop()
     local ok, err = pcall(function()
         race1Running = true
+        hideWorkspaceObjects(LocalPlayer)
         print("[AisbergHub] Auto City Highway Race loop started")
 
         while race1Running do
@@ -994,8 +995,12 @@ local function runRace1Loop()
             _G.raceGround = nil
         end
 
+        -- возвращаем карту
+        restoreWorkspaceObjects()
+
         print("[AisbergHub] Auto City Highway Race loop exited")
     end)
+
     if not ok then
         warn("[runRace1Loop] Error: " .. tostring(err))
         race1Running = false
