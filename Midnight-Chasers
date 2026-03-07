@@ -351,7 +351,7 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Твины
+    -- Tweens
     --------------------------------------------------
     
     local currentTween
@@ -377,8 +377,10 @@ local function createMainGui()
             cfValue.Changed:Connect(function()
                 local pos = cfValue.Value.Position
     
+                -- фейковый пол под машиной
                 _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
     
+                -- машина чуть выше пола
                 local newPos = _G.farmGround.Position + Vector3.new(0, 7, 0)
                 car:PivotTo(CFrame.new(newPos, targetPos))
             end)
@@ -419,8 +421,10 @@ local function createMainGui()
             cfValue.Changed:Connect(function()
                 local pos = cfValue.Value.Position
     
+                -- фейковый дорожный «пол» под траекторией
                 _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 3, pos.Z)
     
+                -- машина чуть выше дороги (чтобы колёса не цепляли, но чекпоинты брались)
                 local newPos = Vector3.new(pos.X, targetPos.Y + 1, pos.Z)
                 car:PivotTo(CFrame.new(newPos, targetPos))
             end)
@@ -893,31 +897,43 @@ local function createMainGui()
     end
     
     --------------------------------------------------
-    -- Auto City Highway Race (Race1)
+    -- Auto City Highway Race 🏁
     --------------------------------------------------
     
     local function runRace1Loop()
         local ok, err = pcall(function()
             race1Running = true
-    
-            hideWorkspaceObjects(LocalPlayer)
-    
             print("[AisbergHub] Auto City Highway Race loop started")
     
             while race1Running do
+                -- 1) ждём, пока игрок сядет в машину
                 while race1Running and not isPlayerInCar() do
                     task.wait(0.2)
                 end
                 if not race1Running then break end
     
-                print("[AisbergHub] Player in car, waiting 5s for manual race start")
+                -- 1.1) берём машину и подвозим к старту их гонки
+                local car = getCar()
+                if not car then
+                    warn("[runRace1Loop] Car not found before start, restarting wait loop")
+                    continue
+                end
+                local speed = getSpeed()
     
+                print("[AisbergHub] Moving car to Race1 start")
+                pcall(function()
+                    tweenRace(car, RACE1_START_CF, speed)
+                end)
+    
+                -- 2) даём время на авто/ручной старт гонки
+                print("[AisbergHub] Player at Race1 start, waiting 5s for race start")
                 for i = 1, 50 do
                     if not race1Running then break end
                     task.wait(0.1)
                 end
                 if not race1Running then break end
     
+                -- 3) ждём внутренний отсчёт гонки
                 print("[AisbergHub] Waiting extra 3s for race countdown")
                 for i = 1, 30 do
                     if not race1Running then break end
@@ -930,13 +946,14 @@ local function createMainGui()
                     continue
                 end
     
-                local car = getCar()
+                -- 4) круг по их чекпоинтам по твоим кадрам
+                car = getCar()
                 if not car then
-                    warn("[runRace1Loop] Car not found, restarting wait loop")
+                    warn("[runRace1Loop] Car not found before route, restarting wait loop")
                     continue
                 end
     
-                local speed = getSpeed()
+                speed = getSpeed()
     
                 for idx, cf in ipairs(race1Frames) do
                     if not race1Running then
@@ -950,31 +967,28 @@ local function createMainGui()
                         warn("[runRace1Loop] tweenRace error at index " .. idx .. ": " .. tostring(tweenErr))
                         break
                     end
-                    if idx == #race1Frames then
-                        break
-                    end
                 end
     
                 if not race1Running then break end
     
+                -- 5) по желанию возвращаемся на старт
                 print("[AisbergHub] Returning to Race1 start")
                 local okBack, backErr = pcall(function()
                     tweenRace(car, RACE1_START_CF, speed)
                 end)
                 if not okBack then
-                    warn("[runRace1Loop] Error while returning to start: " .. tostring(backErr))
+                    warn("[runRace1Loop] Error while returning to Race1 start: " .. tostring(backErr))
                 end
     
                 if not race1Running then break end
     
+                -- 6) пауза и снова по кругу
                 print("[AisbergHub] Lap finished, waiting 5s before next cycle")
                 for i = 1, 50 do
                     if not race1Running then break end
                     task.wait(0.1)
                 end
             end
-    
-            restoreWorkspaceObjects()
     
             if currentTween then
                 currentTween:Cancel()
@@ -986,6 +1000,7 @@ local function createMainGui()
     
             print("[AisbergHub] Auto City Highway Race loop exited")
         end)
+    
         if not ok then
             warn("[runRace1Loop] Error: " .. tostring(err))
             race1Running = false
@@ -996,20 +1011,16 @@ local function createMainGui()
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
             end
-            restoreWorkspaceObjects()
         end
     end
     
     --------------------------------------------------
-    -- Auto Rainbow Bridge Sprint (Race2)
+    -- Auto Rainbow Bridge Sprint 🏁 (Race2)
     --------------------------------------------------
     
     local function runRace2Route()
         local ok, err = pcall(function()
             race2Running = true
-    
-            hideWorkspaceObjects(LocalPlayer)
-    
             print("[AisbergHub] Auto Rainbow Bridge Sprint loop started")
     
             while race2Running do
@@ -1018,8 +1029,20 @@ local function createMainGui()
                 end
                 if not race2Running then break end
     
-                print("[AisbergHub] [Race2] Player in car, waiting 5s for manual race start")
+                local car = getCar()
+                if not car then
+                    warn("[runRace2Route] Car not found before start, restarting wait loop")
+                    continue
+                end
+                local speed = getSpeed()
     
+                -- подвозим к старту Sprint (первый кадр race2Frames)
+                print("[AisbergHub] [Race2] Moving car to Race2 start")
+                pcall(function()
+                    tweenRace(car, race2Frames[1], speed)
+                end)
+    
+                print("[AisbergHub] [Race2] Waiting 5s for race start")
                 for i = 1, 50 do
                     if not race2Running then break end
                     task.wait(0.1)
@@ -1038,13 +1061,13 @@ local function createMainGui()
                     continue
                 end
     
-                local car = getCar()
+                car = getCar()
                 if not car then
-                    warn("[runRace2Route] Car not found, restarting wait loop")
+                    warn("[runRace2Route] Car not found before route, restarting wait loop")
                     continue
                 end
     
-                local speed = getSpeed()
+                speed = getSpeed()
     
                 for idx, cf in ipairs(race2Frames) do
                     if not race2Running then
@@ -1058,19 +1081,16 @@ local function createMainGui()
                         warn("[runRace2Route] tweenRace error at index " .. idx .. ": " .. tostring(tweenErr))
                         break
                     end
-                    if idx == #race2Frames then
-                        break
-                    end
                 end
     
                 if not race2Running then break end
     
-                print("[AisbergHub] [Race2] Returning to Race2 return")
+                print("[AisbergHub] [Race2] Returning to Race2 start")
                 local okBack, backErr = pcall(function()
-                    tweenRace(car, RACE2_RETURN_CF, speed)
+                    tweenRace(car, race2Frames[1], speed)
                 end)
                 if not okBack then
-                    warn("[runRace2Route] Error while returning to Race2 return: " .. tostring(backErr))
+                    warn("[runRace2Route] Error while returning to Race2 start: " .. tostring(backErr))
                 end
     
                 if not race2Running then break end
@@ -1081,8 +1101,6 @@ local function createMainGui()
                     task.wait(0.1)
                 end
             end
-    
-            restoreWorkspaceObjects()
     
             if currentTween then
                 currentTween:Cancel()
@@ -1105,20 +1123,16 @@ local function createMainGui()
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
             end
-            restoreWorkspaceObjects()
         end
     end
-    
+
     --------------------------------------------------
-    -- Auto Dojo Sprint (Race3)
+    -- Auto Dojo Sprint 🏁 (Race3)
     --------------------------------------------------
     
     local function runRace3Route()
         local ok, err = pcall(function()
             race3Running = true
-    
-            hideWorkspaceObjects(LocalPlayer)
-    
             print("[AisbergHub] Auto Dojo Sprint loop started")
     
             while race3Running do
@@ -1127,8 +1141,19 @@ local function createMainGui()
                 end
                 if not race3Running then break end
     
-                print("[AisbergHub] [Race3] Player in car, waiting 5s for manual race start")
+                local car = getCar()
+                if not car then
+                    warn("[runRace3Route] Car not found before start, restarting wait loop")
+                    continue
+                end
+                local speed = getSpeed()
     
+                print("[AisbergHub] [Race3] Moving car to Race3 start")
+                pcall(function()
+                    tweenRace(car, race3Frames[1], speed)
+                end)
+    
+                print("[AisbergHub] [Race3] Waiting 5s for race start")
                 for i = 1, 50 do
                     if not race3Running then break end
                     task.wait(0.1)
@@ -1147,13 +1172,13 @@ local function createMainGui()
                     continue
                 end
     
-                local car = getCar()
+                car = getCar()
                 if not car then
-                    warn("[runRace3Route] Car not found, restarting wait loop")
+                    warn("[runRace3Route] Car not found before route, restarting wait loop")
                     continue
                 end
     
-                local speed = getSpeed()
+                speed = getSpeed()
     
                 for idx, cf in ipairs(race3Frames) do
                     if not race3Running then
@@ -1171,12 +1196,12 @@ local function createMainGui()
     
                 if not race3Running then break end
     
-                print("[AisbergHub] [Race3] Returning to Race3 return")
+                print("[AisbergHub] [Race3] Returning to RACE3_RETURN_CF")
                 local okBack, backErr = pcall(function()
                     tweenRace(car, RACE3_RETURN_CF, speed)
                 end)
                 if not okBack then
-                    warn("[runRace3Route] Error while returning to Race3 return: " .. tostring(backErr))
+                    warn("[runRace3Route] Error while returning to RACE3_RETURN_CF: " .. tostring(backErr))
                 end
     
                 if not race3Running then break end
@@ -1187,8 +1212,6 @@ local function createMainGui()
                     task.wait(0.1)
                 end
             end
-    
-            restoreWorkspaceObjects()
     
             if currentTween then
                 currentTween:Cancel()
@@ -1211,21 +1234,17 @@ local function createMainGui()
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
             end
-            restoreWorkspaceObjects()
         end
     end
-    
+
     --------------------------------------------------
-    -- Auto Rainbow Rinkai Dojo Sprint (Race4)
+    -- Auto Rainbow Rinkai Dojo Sprint 🏁 (Race4)
     --------------------------------------------------
     
     local function runRace4Route()
         local ok, err = pcall(function()
             race4Running = true
-    
-            hideWorkspaceObjects(LocalPlayer)
-    
-            print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop started")
+            print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) started")
     
             while race4Running do
                 while race4Running and not isPlayerInCar() do
@@ -1233,15 +1252,26 @@ local function createMainGui()
                 end
                 if not race4Running then break end
     
-                print("[AisbergHub] [Race4] Player in car, waiting 5s for manual race start")
+                local car = getCar()
+                if not car then
+                    warn("[runRace4Route] Car not found before start, restarting wait loop")
+                    continue
+                end
+                local speed = getSpeed()
     
+                print("[Race4] Moving car to Race4 start")
+                pcall(function()
+                    tweenRace(car, race4Frames[1], speed)
+                end)
+    
+                print("[Race4] Waiting 5s for race start")
                 for i = 1, 50 do
                     if not race4Running then break end
                     task.wait(0.1)
                 end
                 if not race4Running then break end
     
-                print("[AisbergHub] [Race4] Waiting extra 3s for race countdown")
+                print("[Race4] Waiting extra 3s for race countdown")
                 for i = 1, 30 do
                     if not race4Running then break end
                     task.wait(0.1)
@@ -1253,13 +1283,13 @@ local function createMainGui()
                     continue
                 end
     
-                local car = getCar()
+                car = getCar()
                 if not car then
-                    warn("[runRace4Route] Car not found, restarting wait loop")
+                    warn("[runRace4Route] Car not found before route, restarting wait loop")
                     continue
                 end
     
-                local speed = getSpeed()
+                speed = getSpeed()
     
                 for idx, cf in ipairs(race4Frames) do
                     if not race4Running then
@@ -1277,7 +1307,7 @@ local function createMainGui()
     
                 if not race4Running then break end
     
-                print("[AisbergHub] [Race4] Returning to Race4 return")
+                print("[Race4] Returning to Race4 return point")
                 local okBack, backErr = pcall(function()
                     tweenRace(car, RACE4_RETURN_CF, speed)
                 end)
@@ -1287,14 +1317,12 @@ local function createMainGui()
     
                 if not race4Running then break end
     
-                print("[AisbergHub] [Race4] Lap finished, waiting 5s before next cycle")
+                print("[Race4] Lap finished, waiting 5s before next cycle")
                 for i = 1, 50 do
                     if not race4Running then break end
                     task.wait(0.1)
                 end
             end
-    
-            restoreWorkspaceObjects()
     
             if currentTween then
                 currentTween:Cancel()
@@ -1304,7 +1332,7 @@ local function createMainGui()
                 _G.raceGround = nil
             end
     
-            print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop exited")
+            print("[AisbergHub] Auto Rainbow Rinkai Dojo Sprint loop (Race4) exited")
         end)
     
         if not ok then
@@ -1317,7 +1345,6 @@ local function createMainGui()
                 _G.raceGround:Destroy()
                 _G.raceGround = nil
             end
-            restoreWorkspaceObjects()
         end
     end
 
