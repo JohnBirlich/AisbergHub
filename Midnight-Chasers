@@ -254,18 +254,20 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Очистка мира (для Autofarm)
+    -- Очистка мира (для Autofarm и Races-safe)
     --------------------------------------------------
-
+    
     local function hideWorkspaceObjects(plr)
         local ok, err = pcall(function()
+            -- создаём/берём общий бэкап
             if not ReplicatedStorage:FindFirstChild("mrbackupfolder") then
                 local folder = Instance.new("Folder")
                 folder.Name = "mrbackupfolder"
                 folder.Parent = ReplicatedStorage
             end
             local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
-
+    
+            -- что точно убираем по именам
             local mustRemoveByName = {
                 Bush = true,
                 BeltPole = true,
@@ -279,20 +281,29 @@ local function createMainGui()
                 PortCraneOversized = true,
                 RailGuide = true
             }
-
+    
             for _, v in pairs(Workspace:GetChildren()) do
                 local name = v.Name or ""
                 local isPlayerCar = string.find(name, plr.Name) or string.find(name, plr.DisplayName)
-
+    
+                -- никогда не трогаем Terrain
                 if v == Workspace.Terrain then
                     continue
                 end
-
+    
+                -- НОВОЕ: оставляем папку Races и всё внутри
+                if name == "Races" then
+                    -- вся структура чекпоинтов гонок остаётся в Workspace
+                    continue
+                end
+    
+                -- Удаляем декор по имени
                 if mustRemoveByName[name] then
                     v.Parent = backup
                     continue
                 end
-
+    
+                -- Убираем любые модели/папки/меши, которые не являются машиной игрока и не Races
                 if (v:IsA("Model") or v:IsA("Folder") or v:IsA("MeshPart"))
                     and not isPlayerCar
                     and name ~= "" then
@@ -300,23 +311,9 @@ local function createMainGui()
                 end
             end
         end)
+    
         if not ok then
             warn("[hideWorkspaceObjects] Error:", err)
-        end
-    end
-
-    local function restoreWorkspaceObjects()
-        local ok, err = pcall(function()
-            local backup = ReplicatedStorage:FindFirstChild("mrbackupfolder")
-            if backup then
-                for _, v in pairs(backup:GetChildren()) do
-                    v.Parent = Workspace
-                    task.wait()
-                end
-            end
-        end)
-        if not ok then
-            warn("[restoreWorkspaceObjects] Error:", err)
         end
     end
 
