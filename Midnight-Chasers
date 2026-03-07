@@ -321,73 +321,6 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Wheel hide/restore for tweening
-    --------------------------------------------------
-
-    local function hideCarWheels(car)
-        local ok, err = pcall(function()
-            -- создаём общий backup для колёс
-            if not ReplicatedStorage:FindFirstChild("WheelBackup") then
-                local folder = Instance.new("Folder")
-                folder.Name = "WheelBackup"
-                folder.Parent = ReplicatedStorage
-            end
-            local backup = ReplicatedStorage:FindFirstChild("WheelBackup")
-
-            -- индивидуальная папка под конкретную машину
-            local carFolderName = "Wheels_" .. (car.Name or "Car")
-            local carFolder = backup:FindFirstChild(carFolderName)
-            if carFolder then
-                carFolder:ClearAllChildren()
-            else
-                carFolder = Instance.new("Folder")
-                carFolder.Name = carFolderName
-                carFolder.Parent = backup
-            end
-
-            -- ищем колёса по имени/папке; при необходимости допиши свои условия
-            for _, part in ipairs(car:GetDescendants()) do
-                if part:IsA("BasePart") and (part.Name:lower():find("wheel") or part.Name:lower():find("rim")) then
-                    -- сохраняем исходный Anchored/CanCollide
-                    part:SetAttribute("OrigAnchored", part.Anchored)
-                    part:SetAttribute("OrigCanCollide", part.CanCollide)
-
-                    -- клонируем в backup (на всякий случай, если позже захочешь пересобирать)
-                    local clone = part:Clone()
-                    clone.Parent = carFolder
-
-                    -- временно «отключаем» колесо, но не трогаем weld/constraints
-                    part.Anchored = true
-                    part.CanCollide = false
-                    part.Transparency = 1
-                end
-            end
-        end)
-        if not ok then
-            warn("[hideCarWheels] Error:", err)
-        end
-    end
-
-    local function restoreCarWheels(car)
-        local ok, err = pcall(function()
-            for _, part in ipairs(car:GetDescendants()) do
-                if part:IsA("BasePart") and (part.Name:lower():find("wheel") or part.Name:lower():find("rim")) then
-                    local a = part:GetAttribute("OrigAnchored")
-                    local c = part:GetAttribute("OrigCanCollide")
-
-                    if a ~= nil then part.Anchored = a end
-                    if c ~= nil then part.CanCollide = c end
-
-                    part.Transparency = 0
-                end
-            end
-        end)
-        if not ok then
-            warn("[restoreCarWheels] Error:", err)
-        end
-    end
-
-    --------------------------------------------------
     -- Платформы
     --------------------------------------------------
 
@@ -418,90 +351,105 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Твины
+    -- Tweens
     --------------------------------------------------
-
+    
     local currentTween
-
+    
     local function tweenFarm(car, targetCFrame, speed)
         local ok, err = pcall(function()
             ensureFarmGround()
-
+    
             local plr = LocalPlayer
             local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
             if not hrp then
                 warn("[tweenFarm] No HumanoidRootPart")
                 return
             end
-
+    
             local targetPos = targetCFrame.Position
             local dist = (hrp.Position - targetPos).Magnitude
             local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
-
+    
             local cfValue = Instance.new("CFrameValue")
             cfValue.Value = car:GetPrimaryPartCFrame()
-
+    
             cfValue.Changed:Connect(function()
                 local pos = cfValue.Value.Position
+    
+                -- Фейковый пол под машиной
                 _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
-                car:PivotTo(CFrame.new(_G.farmGround.Position + Vector3.new(0, 7, 0), targetPos))
-                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+    
+                -- Машина чуть выше пола (чтобы не дергало)
+                local newPos = _G.farmGround.Position + Vector3.new(0, 7, 0)
+                car:PivotTo(CFrame.new(newPos, targetPos))
+    
+                -- ВАЖНО: не трогаем AssemblyLinearVelocity, чтобы не ломать подвеску
+                -- car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
             end)
-
+    
             if currentTween then
                 currentTween:Cancel()
             end
             currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
             currentTween:Play()
-
+    
             repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
-
+    
             cfValue:Destroy()
         end)
         if not ok then
             warn("[tweenFarm] Error:", err)
         end
     end
-
+    
     local function tweenRace(car, targetCFrame, speed)
         local ok, err = pcall(function()
             ensureRaceGround()
-
+    
             local plr = LocalPlayer
             local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
             if not hrp then
                 warn("[tweenRace] No HumanoidRootPart")
                 return
             end
-
+    
             local targetPos = targetCFrame.Position
             local dist = (hrp.Position - targetPos).Magnitude
             local info = TweenInfo.new(dist / speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 0, false, 0)
-
+    
             local cfValue = Instance.new("CFrameValue")
             cfValue.Value = car:GetPrimaryPartCFrame()
-
+    
             cfValue.Changed:Connect(function()
                 local pos = cfValue.Value.Position
+    
+                -- Фейковый пол под траекторией
                 _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 2, pos.Z)
-                car:PivotTo(CFrame.new(Vector3.new(pos.X, targetPos.Y + 1, pos.Z), targetPos))
-                car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
+    
+                -- Машина почти на высоте чекпоинтов, чтобы колёса реально касались
+                local newPos = Vector3.new(pos.X, targetPos.Y + 0.5, pos.Z)
+                car:PivotTo(CFrame.new(newPos, targetPos))
+    
+                -- НЕ задаём AssemblyLinearVelocity
+                -- car.PrimaryPart.AssemblyLinearVelocity = car.PrimaryPart.CFrame.LookVector * speed
             end)
-
+    
             if currentTween then
                 currentTween:Cancel()
             end
             currentTween = TweenService:Create(cfValue, info, {Value = targetCFrame})
             currentTween:Play()
-
+    
             repeat task.wait() until currentTween.PlaybackState ~= Enum.PlaybackState.Playing
-
+    
             cfValue:Destroy()
         end)
         if not ok then
             warn("[tweenRace] Error:", err)
         end
     end
+    
 
     --------------------------------------------------
     -- Маршрут фарма
@@ -955,11 +903,11 @@ local function createMainGui()
         end
     end
 
-    --------------------------------------------------
-    -- Auto City Highway Race 🏁
-    --------------------------------------------------
+--------------------------------------------------
+-- Auto City Highway Race 🏁
+--------------------------------------------------
 
-    local function runRace1Loop()
+local function runRace1Loop()
     local ok, err = pcall(function()
         race1Running = true
         print("[AisbergHub] Auto City Highway Race loop started")
@@ -1001,9 +949,6 @@ local function createMainGui()
                 continue
             end
 
-            -- ВКЛЮЧАЕМ защиту колёс
-            hideCarWheels(car)
-
             local speed = getSpeed()
 
             for idx, cf in ipairs(race1Frames) do
@@ -1023,11 +968,7 @@ local function createMainGui()
                 end
             end
 
-            if not race1Running then
-                -- перед выходом обязательно вернуть колёса
-                restoreCarWheels(car)
-                break
-            end
+            if not race1Running then break end
 
             -- 5) возвращаем машину на стартовый CFrame
             print("[AisbergHub] Returning to Race1 start")
@@ -1037,9 +978,6 @@ local function createMainGui()
             if not okBack then
                 warn("[runRace1Loop] Error while returning to start: " .. tostring(backErr))
             end
-
-            -- ВОЗВРАЩАЕМ колёса после полного круга + возврата
-            restoreCarWheels(car)
 
             if not race1Running then break end
 
@@ -1074,7 +1012,7 @@ local function createMainGui()
     end
 end
 
-   --------------------------------------------------
+--------------------------------------------------
 -- Auto Rainbow Bridge Sprint 🏁 (Race2)
 --------------------------------------------------
 
@@ -1120,9 +1058,6 @@ local function runRace2Route()
                 continue
             end
 
-            -- включаем защиту колёс
-            hideCarWheels(car)
-
             local speed = getSpeed()
 
             for idx, cf in ipairs(race2Frames) do
@@ -1142,10 +1077,7 @@ local function runRace2Route()
                 end
             end
 
-            if not race2Running then
-                restoreCarWheels(car)
-                break
-            end
+            if not race2Running then break end
 
             -- 5) возвращаемся на старт Race2
             print("[AisbergHub] [Race2] Returning to Race2 start")
@@ -1155,9 +1087,6 @@ local function runRace2Route()
             if not okBack then
                 warn("[runRace2Route] Error while returning to Race2 start: " .. tostring(backErr))
             end
-
-            -- отключаем защиту колёс после полного круга
-            restoreCarWheels(car)
 
             if not race2Running then break end
 
@@ -1237,9 +1166,6 @@ local function runRace3Route()
                 continue
             end
 
-            -- включаем защиту колёс
-            hideCarWheels(car)
-
             local speed = getSpeed()
 
             -- проезд по чекпоинтам race3Frames
@@ -1257,10 +1183,7 @@ local function runRace3Route()
                 end
             end
 
-            if not race3Running then
-                restoreCarWheels(car)
-                break
-            end
+            if not race3Running then break end
 
             -- возврат к RACE3_RETURN_CF
             print("[AisbergHub] [Race3] Returning to RACE3_RETURN_CF")
@@ -1270,9 +1193,6 @@ local function runRace3Route()
             if not okBack then
                 warn("[runRace3Route] Error while returning to RACE3_RETURN_CF: " .. tostring(backErr))
             end
-
-            -- возвращаем колёса
-            restoreCarWheels(car)
 
             if not race3Running then break end
 
@@ -1353,9 +1273,6 @@ local function runRace4Route()
                 continue
             end
 
-            -- включаем защиту колёс
-            hideCarWheels(car)
-
             local speed = getSpeed()
 
             for idx, cf in ipairs(race4Frames) do
@@ -1372,10 +1289,7 @@ local function runRace4Route()
                 end
             end
 
-            if not race4Running then
-                restoreCarWheels(car)
-                break
-            end
+            if not race4Running then break end
 
             -- 5) возвращаем машину к RACE4_RETURN_CF
             print("[Race4] Returning to Race4 return point")
@@ -1385,9 +1299,6 @@ local function runRace4Route()
             if not okBack then
                 warn("[runRace4Route] Error while returning to Race4 return: " .. tostring(backErr))
             end
-
-            -- возвращаем колёса
-            restoreCarWheels(car)
 
             if not race4Running then break end
 
