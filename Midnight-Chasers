@@ -378,10 +378,10 @@ local function createMainGui()
                 local pos = cfValue.Value.Position
     
                 -- Фейковый пол под машиной
-                _G.farmGround.Position = pos - Vector3.new(0, 14, 0)
+                _G.raceGround.Position = Vector3.new(pos.X, targetPos.Y - 3, pos.Z)
     
                 -- Машина чуть выше пола (чтобы не дергало)
-                local newPos = _G.farmGround.Position + Vector3.new(0, 7, 0)
+                local newPos = Vector3.new(pos.X, targetPos.Y + 1.5, pos.Z)
                 car:PivotTo(CFrame.new(newPos, targetPos))
     
                 -- ВАЖНО: не трогаем AssemblyLinearVelocity, чтобы не ломать подвеску
