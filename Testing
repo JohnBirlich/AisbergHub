@@ -1,5 +1,5 @@
--- Aura Speed Escape – Auto Start/End TP
--- AisbergHub style
+-- +1 Aura Speed Escape – Auto Start/End Teleport
+-- AisbergHub simple GUI
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -24,10 +24,20 @@ local END_CF = CFrame.new(
 -- Состояние
 local running = false
 
--- Получение HRP
-local function getHRP()
+-- Получение персонажа и Humanoid
+local function getCharAndHum()
     local char = player.Character or player.CharacterAdded:Wait()
-    return char:WaitForChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
+    return char, hum
+end
+
+-- Безопасный телепорт через PivotTo
+local function safeTeleport(cf)
+    local char, hum = getCharAndHum()
+    hum.PlatformStand = true
+    char:PivotTo(cf)
+    task.wait(0.1)
+    hum.PlatformStand = false
 end
 
 -- Основной цикл
@@ -38,23 +48,13 @@ local function loopTeleport()
 
     task.spawn(function()
         while running do
-            local hrp = getHRP()
-
             -- Старт -> Финиш
-            hrp.CFrame = START_CF
-            task.wait(0.1) -- на всякий
-            hrp.CFrame = END_CF
+            safeTeleport(START_CF)
+            task.wait(0.1)
+            safeTeleport(END_CF)
 
             -- Ожидание 1 сек
             task.wait(1)
-
-            -- Финиш -> Старт
-            if not running then break end
-            hrp = getHRP()
-            hrp.CFrame = START_CF
-
-            -- Можно добавить ещё одну задержку, если нужно
-            task.wait(0.1)
         end
 
         print("[AisbergHub] Aura Speed Escape auto TP stopped")
@@ -110,7 +110,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 24)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
-title.Text = "Aura Speed Escape"
+title.Text = "+1 Aura Speed Escape"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.TextSize = 16
 title.Parent = frame
@@ -135,5 +135,17 @@ toggleBtn.MouseButton1Click:Connect(function()
     else
         toggleBtn.Text = "Auto TP: OFF"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+    end
+end)
+
+--------------------------------------------------
+-- Тоггл GUI на клавишу G (по желанию)
+--------------------------------------------------
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.G then
+        gui.Enabled = not gui.Enabled
+        print("[AisbergHub] GUI toggled, Enabled =", gui.Enabled)
     end
 end)
