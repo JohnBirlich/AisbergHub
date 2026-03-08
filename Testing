@@ -1,57 +1,74 @@
--- +1 Aura Speed Escape – Auto Start/End Teleport
--- AisbergHub simple GUI
+-- Aisberg Hub | +1 Aura Speed Escape
+-- Auto tween TP start <-> end
 
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS          = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
--- Точки
-local START_CF = CFrame.new(
-    -592.599365, 36.1112404, 2004.25488,
-    1, 0, 0,
-    0, 1, 0,
-    0, 0, 1
-)
+local START_CF = CFrame.new(-592.599365, 36.1112404, 2004.25488, 1,0,0, 0,1,0, 0,0,1)
+local END_CF   = CFrame.new(-565.550415, 20.2728081, -6068.28613, -1,0,0, 0,1,0, 0,0,-1)
 
-local END_CF = CFrame.new(
-    -565.550415, 20.2728081, -6068.28613,
-    -1, 0, 0,
-    0, 1, 0,
-    0, 0, -1
-)
-
--- Состояние
-local running = false
+local running      = false
+local currentTween = nil
 
 local function getCharAndHum()
     local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
+    local hum  = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
     return char, hum
 end
 
-local function safeTeleport(cf)
+local function tweenTo(tag, targetCF, duration)
     local char, hum = getCharAndHum()
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then
+        warn("[AisbergHub] No HumanoidRootPart")
+        return
+    end
+
     hum.PlatformStand = true
-    char:PivotTo(cf)
-    task.wait(0.1)
+
+    local cfValue = Instance.new("CFrameValue")
+    cfValue.Value = root.CFrame
+
+    cfValue.Changed:Connect(function(newCF)
+        char:PivotTo(newCF)
+    end)
+
+    if currentTween then
+        currentTween:Cancel()
+    end
+
+    local info = TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+    currentTween = TweenService:Create(cfValue, info, { Value = targetCF })
+    currentTween:Play()
+
+    currentTween.Completed:Wait()
+    cfValue:Destroy()
     hum.PlatformStand = false
 end
 
-local function loopTeleport()
+local function loopTween()
     if running then return end
     running = true
-    print("[AisbergHub] Aura Speed Escape auto TP started")
+    print("[AisbergHub] Tween auto TP started")
 
     task.spawn(function()
         while running do
-            safeTeleport(START_CF)
-            task.wait(0.1)
-            safeTeleport(END_CF)
-            task.wait(1)
+            tweenTo("START->END", END_CF, 2)  -- 2 сек до финиша
+            if not running then break end
+            task.wait(1)                      -- 1 сек ожидания
+            tweenTo("END->START", START_CF, 2)
+            if not running then break end
+            task.wait(0.2)
         end
 
-        print("[AisbergHub] Aura Speed Escape auto TP stopped")
+        if currentTween then
+            currentTween:Cancel()
+            currentTween = nil
+        end
+        print("[AisbergHub] Tween auto TP stopped")
     end)
 end
 
@@ -60,19 +77,19 @@ end
 --------------------------------------------------
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "AuraSpeedEscape_AutoTP"
+gui.Name = "AisbergHub_AuraTween"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 90)
-frame.Position = UDim2.new(0.6, -110, 0.5, -45)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.Size = UDim2.new(0, 260, 0, 100)
+frame.Position = UDim2.new(0.6, -130, 0.5, -50)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Parent = gui
 
--- перетаскивание
+-- Drag
 local dragging, dragStart, startPos
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -111,13 +128,12 @@ title.Size = UDim2.new(1, -24, 1, 0)
 title.Position = UDim2.new(0, 4, 0, 0)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
-title.Text = "+1 Aura Speed Escape"
+title.Text = "Aisberg Hub | Aura Speed Escape"
 title.TextColor3 = Color3.new(1, 1, 1)
-title.TextSize = 14
+title.TextSize = 12
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = titleBar
 
--- Крестик
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 24, 1, 0)
 closeBtn.Position = UDim2.new(1, -24, 0, 0)
@@ -130,6 +146,7 @@ closeBtn.Parent = titleBar
 
 closeBtn.MouseButton1Click:Connect(function()
     running = false
+    if currentTween then currentTween:Cancel() end
     gui:Destroy()
 end)
 
@@ -139,33 +156,32 @@ toggleBtn.Position = UDim2.new(0, 10, 0, 34)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.Text = "Auto TP: OFF"
+toggleBtn.Text = "Auto Tween TP: OFF"
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
 toggleBtn.TextSize = 14
 toggleBtn.Parent = frame
 
 toggleBtn.MouseButton1Click:Connect(function()
     running = not running
+    print("[AisbergHub] Toggle clicked, running =", running)
     if running then
-        toggleBtn.Text = "Auto TP: ON"
+        toggleBtn.Text = "Auto Tween TP: ON"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 160, 90)
-        loopTeleport()
+        loopTween()
     else
-        toggleBtn.Text = "Auto TP: OFF"
+        toggleBtn.Text = "Auto Tween TP: OFF"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        if currentTween then
+            currentTween:Cancel()
+            currentTween = nil
+        end
     end
 end)
-
---------------------------------------------------
--- Тоггл GUI на G (если крестик не хочешь юзать)
---------------------------------------------------
 
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.G then
-        if gui and gui.Parent then
-            gui.Enabled = not gui.Enabled
-            print("[AisbergHub] GUI toggled, Enabled =", gui.Enabled)
-        end
+        gui.Enabled = not gui.Enabled
+        print("[AisbergHub] GUI toggled, Enabled =", gui.Enabled)
     end
 end)
