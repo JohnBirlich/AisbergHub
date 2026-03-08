@@ -24,14 +24,12 @@ local END_CF = CFrame.new(
 -- Состояние
 local running = false
 
--- Получение персонажа и Humanoid
 local function getCharAndHum()
     local char = player.Character or player.CharacterAdded:Wait()
     local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid")
     return char, hum
 end
 
--- Безопасный телепорт через PivotTo
 local function safeTeleport(cf)
     local char, hum = getCharAndHum()
     hum.PlatformStand = true
@@ -40,7 +38,6 @@ local function safeTeleport(cf)
     hum.PlatformStand = false
 end
 
--- Основной цикл
 local function loopTeleport()
     if running then return end
     running = true
@@ -48,12 +45,9 @@ local function loopTeleport()
 
     task.spawn(function()
         while running do
-            -- Старт -> Финиш
             safeTeleport(START_CF)
             task.wait(0.1)
             safeTeleport(END_CF)
-
-            -- Ожидание 1 сек
             task.wait(1)
         end
 
@@ -62,7 +56,7 @@ local function loopTeleport()
 end
 
 --------------------------------------------------
--- Простое меню
+-- GUI
 --------------------------------------------------
 
 local gui = Instance.new("ScreenGui")
@@ -106,18 +100,42 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 24)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = frame
+
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 24)
+title.Size = UDim2.new(1, -24, 1, 0)
+title.Position = UDim2.new(0, 4, 0, 0)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
 title.Text = "+1 Aura Speed Escape"
 title.TextColor3 = Color3.new(1, 1, 1)
-title.TextSize = 16
-title.Parent = frame
+title.TextSize = 14
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = titleBar
+
+-- Крестик
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 24, 1, 0)
+closeBtn.Position = UDim2.new(1, -24, 0, 0)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+closeBtn.TextSize = 16
+closeBtn.Parent = titleBar
+
+closeBtn.MouseButton1Click:Connect(function()
+    running = false
+    gui:Destroy()
+end)
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(1, -20, 0, 40)
-toggleBtn.Position = UDim2.new(0, 10, 0, 30)
+toggleBtn.Position = UDim2.new(0, 10, 0, 34)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
 toggleBtn.BorderSizePixel = 0
 toggleBtn.Font = Enum.Font.GothamBold
@@ -139,13 +157,15 @@ toggleBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------
--- Тоггл GUI на клавишу G (по желанию)
+-- Тоггл GUI на G (если крестик не хочешь юзать)
 --------------------------------------------------
 
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.G then
-        gui.Enabled = not gui.Enabled
-        print("[AisbergHub] GUI toggled, Enabled =", gui.Enabled)
+        if gui and gui.Parent then
+            gui.Enabled = not gui.Enabled
+            print("[AisbergHub] GUI toggled, Enabled =", gui.Enabled)
+        end
     end
 end)
