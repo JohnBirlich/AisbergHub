@@ -1,0 +1,274 @@
+-- Aisberg Hub | +1 Aura Speed Escape
+-- Auto TP loop start <-> end + anti-popups
+
+local Players = game:GetService("Players")
+local UIS     = game:GetService("UserInputService")
+local RS      = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+
+print("[AisbergHub] Aura TP script loaded")
+
+--------------------------------------------------
+-- Точки
+--------------------------------------------------
+
+local START_CF = CFrame.new(
+    -592.599365, 36.1112404, 2004.25488,
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1
+)
+
+local END_CF = CFrame.new(
+    -565.550415, 24.2728081, -6068.28613,
+    -1, 0, 0,
+    0, 1, 0,
+    0, 0, -1
+)
+
+local running = false
+
+local function getRoot()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local root = char:FindFirstChild("HumanoidRootPart")
+        or char:FindFirstChild("LowerTorso")
+        or char:FindFirstChildWhichIsA("BasePart")
+    return root
+end
+
+local function tpDirect(cf)
+    local root = getRoot()
+    if not root then
+        warn("[AisbergHub] No root part")
+        return
+    end
+    root.CFrame = cf
+end
+
+--------------------------------------------------
+-- Луп авто-ТП
+--------------------------------------------------
+
+local function startLoop()
+    if running then return end
+    running = true
+    print("[AisbergHub] Auto TP loop START")
+
+    task.spawn(function()
+        while running do
+            tpDirect(START_CF)
+            task.wait(0.1)
+            tpDirect(END_CF)
+
+            -- пауза ~1 сек (разбита, чтобы можно было остановить)
+            for i = 1, 10 do
+                if not running then break end
+                task.wait(0.1)
+            end
+        end
+
+        print("[AisbergHub] Auto TP loop STOP")
+    end)
+end
+
+local function stopLoop()
+    running = false
+end
+
+--------------------------------------------------
+-- GUI всегда поверх
+--------------------------------------------------
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "AisbergHub_AutoTP"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999999
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 280, 0, 130)
+frame.Position = UDim2.new(0.6, -140, 0.5, -65)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.ZIndex = 10
+frame.Parent = gui
+
+-- drag
+local dragging, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+
+frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 24)
+titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 11
+titleBar.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -24, 1, 0)
+title.Position = UDim2.new(0, 4, 0, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.Text = "Aisberg Hub | Aura Speed Escape"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextSize = 12
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 12
+title.Parent = titleBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 24, 1, 0)
+closeBtn.Position = UDim2.new(1, -24, 0, 0)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+closeBtn.TextSize = 16
+closeBtn.ZIndex = 12
+closeBtn.Parent = titleBar
+
+closeBtn.MouseButton1Click:Connect(function()
+    stopLoop()
+    gui:Destroy()
+end)
+
+local onceBtn = Instance.new("TextButton")
+onceBtn.Size = UDim2.new(1, -20, 0, 30)
+onceBtn.Position = UDim2.new(0, 10, 0, 34)
+onceBtn.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+onceBtn.BorderSizePixel = 0
+onceBtn.Font = Enum.Font.GothamBold
+onceBtn.Text = "TP ONCE -> END"
+onceBtn.TextColor3 = Color3.new(1, 1, 1)
+onceBtn.TextSize = 14
+onceBtn.ZIndex = 11
+onceBtn.Parent = frame
+
+onceBtn.MouseButton1Click:Connect(function()
+    tpDirect(END_CF)
+end)
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(1, -20, 0, 30)
+toggleBtn.Position = UDim2.new(0, 10, 0, 70)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Text = "Auto TP loop: OFF"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.TextSize = 14
+toggleBtn.ZIndex = 11
+toggleBtn.Parent = frame
+
+toggleBtn.MouseButton1Click:Connect(function()
+    if not running then
+        toggleBtn.Text = "Auto TP loop: ON"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 160, 90)
+        startLoop()
+    else
+        toggleBtn.Text = "Auto TP loop: OFF"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        stopLoop()
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.G then
+        gui.Enabled = not gui.Enabled
+    end
+end)
+
+--------------------------------------------------
+-- Hook RemoteEvent PopUp / WinPopUp (глушим FireServer с клиента)
+--------------------------------------------------
+
+local net = RS:FindFirstChild("Network")
+local guiNet = net and net:FindFirstChild("Gui")
+
+if guiNet and guiNet:FindFirstChild("Notifications") then
+    local notif = guiNet.Notifications
+    local popUp = notif:FindFirstChild("PopUp")
+    local winPopUp = notif:FindFirstChild("WinPopUp")
+
+    if popUp or winPopUp then
+        local mt = getrawmetatable(game)
+        local oldReadOnly = isreadonly and isreadonly(mt)
+        setreadonly(mt, false)
+        local oldNamecall = mt.__namecall
+
+        mt.__namecall = function(self, ...)
+            local method = getnamecallmethod()
+            if method == "FireServer" and (self == popUp or self == winPopUp) then
+                -- не отправляем запросы на показ попапов
+                return
+            end
+            return oldNamecall(self, ...)
+        end
+
+        if oldReadOnly ~= false then
+            setreadonly(mt, true)
+        end
+
+        print("[AisbergHub] PopUp/WinPopUp FireServer hooked")
+    end
+end
+
+--------------------------------------------------
+-- Клиентское удаление окон уведомлений в PlayerGui
+--------------------------------------------------
+
+local function startGuiKiller()
+    local pg = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
+
+    task.spawn(function()
+        while true do
+            for _, obj in ipairs(pg:GetDescendants()) do
+                if obj:IsA("ScreenGui") or obj:IsA("Frame") or obj:IsA("TextLabel") or obj:IsA("ImageLabel") then
+                    local name = obj.Name:lower()
+
+                    -- Подстрой под реальные имена их GUI
+                    if name:find("popup")
+                        or name:find("winpopup")
+                        or name:find("notification")
+                        or name:find("reward")
+                    then
+                        obj:Destroy()
+                    end
+                end
+            end
+
+            task.wait(0.1)
+        end
+    end)
+end
+
+startGuiKiller()
