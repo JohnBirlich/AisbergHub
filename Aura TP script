@@ -1,5 +1,5 @@
 -- Aisberg Hub | +1 Aura Speed Escape
--- Auto TP loop start <-> end + anti-popups
+-- Auto TP loop start <-> end + remove WinPopUp/PopUp + position check
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
@@ -21,7 +21,7 @@ local START_CF = CFrame.new(
 )
 
 local END_CF = CFrame.new(
-    -565.550415, 24.2728081, -6068.28613,
+    -565.550415, 23.2728081, -6068.28613,
     -1, 0, 0,
     0, 1, 0,
     0, 0, -1
@@ -47,7 +47,7 @@ local function tpDirect(cf)
 end
 
 --------------------------------------------------
--- Луп авто-ТП
+-- Луп авто-ТП с проверкой позиции
 --------------------------------------------------
 
 local function startLoop()
@@ -57,11 +57,42 @@ local function startLoop()
 
     task.spawn(function()
         while running do
-            tpDirect(START_CF)
-            task.wait(0.1)
-            tpDirect(END_CF)
+            local root = getRoot()
+            if not root then
+                task.wait(0.2)
+                continue
+            end
 
-            -- пауза ~1 сек (разбита, чтобы можно было остановить)
+            -- 1) переносим на старт
+            tpDirect(START_CF)
+
+            -- 2) ждём, пока игрок реально окажется рядом со стартом (радиус 5)
+            local startPos = START_CF.Position
+            local okAtStart = false
+            for i = 1, 50 do -- максимум ~5 секунд (50 * 0.1)
+                if not running then break end
+                root = getRoot()
+                if not root then break end
+
+                local dist = (root.Position - startPos).Magnitude
+                if dist <= 5 then
+                    okAtStart = true
+                    break
+                end
+
+                task.wait(0.1)
+            end
+
+            if not running then break end
+
+            if okAtStart then
+                -- 3) только если игрок у старта, кидаем на финиш
+                tpDirect(END_CF)
+            else
+                warn("[AisbergHub] Player did not reach START area, skip END teleport")
+            end
+
+            -- 4) пауза ~1 сек, разбитая чтобы можно было остановить
             for i = 1, 10 do
                 if not running then break end
                 task.wait(0.1)
@@ -98,12 +129,12 @@ frame.ZIndex = 10
 frame.Parent = gui
 
 -- drag
-local dragging, dragStart, startPos
+local dragging, dragStart, startPosGui
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
-        startPos = frame.Position
+        startPosGui = frame.Position
     end
 end)
 
@@ -117,10 +148,10 @@ UIS.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
+            startPosGui.X.Scale,
+            startPosGui.X.Offset + delta.X,
+            startPosGui.Y.Scale,
+            startPosGui.Y.Offset + delta.Y
         )
     end
 end)
@@ -208,67 +239,24 @@ UIS.InputBegan:Connect(function(input, gpe)
 end)
 
 --------------------------------------------------
--- Hook RemoteEvent PopUp / WinPopUp (глушим FireServer с клиента)
+-- Прямое удаление WinPopUp / PopUp
+-- ReplicatedStorage > Network > Gui > Notifications > WinPopUp/PopUp
 --------------------------------------------------
 
 local net = RS:FindFirstChild("Network")
 local guiNet = net and net:FindFirstChild("Gui")
+local notifFolder = guiNet and guiNet:FindFirstChild("Notifications")
 
-if guiNet and guiNet:FindFirstChild("Notifications") then
-    local notif = guiNet.Notifications
-    local popUp = notif:FindFirstChild("PopUp")
-    local winPopUp = notif:FindFirstChild("WinPopUp")
-
-    if popUp or winPopUp then
-        local mt = getrawmetatable(game)
-        local oldReadOnly = isreadonly and isreadonly(mt)
-        setreadonly(mt, false)
-        local oldNamecall = mt.__namecall
-
-        mt.__namecall = function(self, ...)
-            local method = getnamecallmethod()
-            if method == "FireServer" and (self == popUp or self == winPopUp) then
-                -- не отправляем запросы на показ попапов
-                return
-            end
-            return oldNamecall(self, ...)
+if notifFolder then
+    local removed = 0
+    for _, name in ipairs({"WinPopUp", "PopUp"}) do
+        local obj = notifFolder:FindFirstChild(name)
+        if obj then
+            obj:Destroy()
+            removed += 1
         end
-
-        if oldReadOnly ~= false then
-            setreadonly(mt, true)
-        end
-
-        print("[AisbergHub] PopUp/WinPopUp FireServer hooked")
     end
+    print("[AisbergHub] Removed popup remotes from RS.Network.Gui.Notifications, count =", removed)
+else
+    warn("[AisbergHub] Notifications folder not found in RS.Network.Gui")
 end
-
---------------------------------------------------
--- Клиентское удаление окон уведомлений в PlayerGui
---------------------------------------------------
-
-local function startGuiKiller()
-    local pg = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
-
-    task.spawn(function()
-        while true do
-            for _, obj in ipairs(pg:GetDescendants()) do
-                if obj:IsA("ScreenGui") or obj:IsA("Frame") or obj:IsA("TextLabel") or obj:IsA("ImageLabel") then
-                    local name = obj.Name:lower()
-
-                    -- Подстрой под реальные имена их GUI
-                    if name:find("popup")
-                        or name:find("winpopup")
-                        or name:find("notification")
-                        or name:find("reward")
-                    then
-                        obj:Destroy()
-                    end
-                end
-            end
-
-            task.wait(0.1)
-        end
-    end)
-end
-
-startGuiKiller()
