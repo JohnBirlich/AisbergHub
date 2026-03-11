@@ -1,534 +1,1832 @@
--- 🌊 Sailor Piece | Aisberg-style Hub v1 (Xeno/Wave/Solara)
-
-if getgenv and getgenv().SailorPieceHubLoaded then return end
-if getgenv then getgenv().SailorPieceHubLoaded = true end
-
-local Players      = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UIS          = game:GetService("UserInputService")
-local RunService   = game:GetService("RunService")
-
+--// SERVICES
+local Players = game:GetService("Players)
 local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
---------------------------------------------------
--- Welcome баннер (Aisberg стиль)
---------------------------------------------------
+--// TERMINAL STYLE COLORS
+local MAIN_COLOR   = Color3.fromRGB(0, 0, 0)
+local PANEL_COLOR  = Color3.fromRGB(5, 5, 5)
+local PANEL_DARK   = Color3.fromRGB(0, 10, 0)
+local ACCENT_COLOR = Color3.fromRGB(0, 255, 0)
+local TEXT_MAIN    = Color3.fromRGB(0, 255, 0)
+local TEXT_SUB     = Color3.fromRGB(0, 180, 0)
 
-local function showWelcomeAndThen(callback)
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "AisbergHub_Welcome"
-    gui.ResetOnSpawn = false
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local REGULAR_FONT = Enum.Font.Code
+local BOLD_FONT    = Enum.Font.Code
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 420, 0, 80)
-    frame.AnchorPoint = Vector2.new(0.5, 0.5)
-    frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    frame.BorderSizePixel = 0
-    frame.BackgroundTransparency = 1
-    frame.Parent = gui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = frame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1.5
-    stroke.Color = Color3.fromRGB(90, 140, 255)
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Transparency = 1
-    stroke.Parent = frame
-
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Position = UDim2.new(0, 12, 0, 12)
-    title.Size = UDim2.new(1, -24, 0, 26)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 22
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextTransparency = 1
-    title.Text = "WELCOME TO THE SAILOR PIECE HUB!"
-    title.Parent = frame
-
-    local desc = Instance.new("TextLabel")
-    desc.BackgroundTransparency = 1
-    desc.Position = UDim2.new(0, 12, 0, 40)
-    desc.Size = UDim2.new(1, -24, 0, 26)
-    desc.Font = Enum.Font.Gotham
-    desc.TextSize = 14
-    desc.TextWrapped = true
-    desc.TextXAlignment = Enum.TextXAlignment.Center
-    desc.TextColor3 = Color3.fromRGB(200, 200, 200)
-    desc.TextTransparency = 1
-    desc.Text = "Sailor Piece • Islands • AutoFarm • Boss & NPC Hub"
-    desc.Parent = frame
-
-    local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(frame,  inInfo, {BackgroundTransparency = 0.05}):Play()
-    TweenService:Create(stroke, inInfo, {Transparency = 0}):Play()
-    TweenService:Create(title,  inInfo, {TextTransparency = 0}):Play()
-    TweenService:Create(desc,   inInfo, {TextTransparency = 0.1}):Play()
-    task.wait(0.45)
-
-    task.wait(2.0)
-
-    local outInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-    TweenService:Create(frame,  outInfo, {BackgroundTransparency = 1}):Play()
-    TweenService:Create(stroke, outInfo, {Transparency = 1}):Play()
-    TweenService:Create(title,  outInfo, {TextTransparency = 1}):Play()
-    TweenService:Create(desc,   outInfo, {TextTransparency = 1}):Play()
-    task.wait(0.45)
-
-    gui:Destroy()
-    if callback then callback() end
+--// HELPERS
+local function round(obj, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius)
+    c.Parent = obj
+    return c
 end
 
---------------------------------------------------
--- Основной GUI (после welcome)
---------------------------------------------------
+local function addStroke(obj, thickness, color, transparency)
+    local s = Instance.new("UIStroke")
+    s.Thickness = thickness or 1
+    s.Color = color or Color3.new(0,0,0)
+    s.Transparency = transparency or 0.5
+    s.Parent = obj
+    return s
+end
 
-local function createMainGui()
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+--// ROOT GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AnimeTerminalHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.Parent = game:GetService("CoreGui")
 
-    --------------------------------------------------
-    -- Anti AFK
-    --------------------------------------------------
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 800, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -400, 0.5, -240)
+MainFrame.BackgroundColor3 = MAIN_COLOR
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = false
+MainFrame.Parent = ScreenGui
+round(MainFrame, 4)
+addStroke(MainFrame, 2, Color3.fromRGB(0, 60, 0), 0.1)
 
-    warn("[SailorPieceHub] Anti AFK launching")
-    LocalPlayer.Idled:Connect(function()
-        warn("[SailorPieceHub] Anti AFK triggered")
-        local vu = game:GetService("VirtualUser")
-        vu:CaptureController()
-        vu:ClickButton2(Vector2.new())
-    end)
+-- Title bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 32)
+TitleBar.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
 
-    --------------------------------------------------
-    -- GUI каркас (как в Midnight Chasers)
-    --------------------------------------------------
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -90, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Font = BOLD_FONT
+TitleLabel.TextSize = 16
+TitleLabel.TextColor3 = TEXT_MAIN
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Text = "ANIME TERMINAL HUB"
+TitleLabel.Parent = TitleBar
 
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "SailorPieceGui"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = PlayerGui
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -32, 0, 3)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
+CloseBtn.Text = "X"
+CloseBtn.Font = BOLD_FONT
+CloseBtn.TextSize = 14
+CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Parent = TitleBar
+round(CloseBtn, 4)
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 270, 0, 340)
-    mainFrame.Position = UDim2.new(0, 20, 0.5, -170)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Active = true
-    mainFrame.Draggable = true
-    mainFrame.Parent = screenGui
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    title.BorderSizePixel = 0
-    title.Font = Enum.Font.GothamBold
-    title.Text = "Sailor Piece | Aisberg Hub"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.TextSize = 16
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = mainFrame
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+MinimizeBtn.Position = UDim2.new(1, -64, 0, 3)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(0, 40, 0)
+MinimizeBtn.Text = "_"
+MinimizeBtn.Font = BOLD_FONT
+MinimizeBtn.TextSize = 18
+MinimizeBtn.TextColor3 = ACCENT_COLOR
+MinimizeBtn.BorderSizePixel = 0
+MinimizeBtn.Parent = TitleBar
+round(MinimizeBtn, 4)
 
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "CloseButton"
-    closeBtn.Size = UDim2.new(0, 30, 1, 0)
-    closeBtn.Position = UDim2.new(1, -30, 0, 0)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Text = "X"
-    closeBtn.TextSize = 18
-    closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-    closeBtn.Parent = title
+local ContentHolder = Instance.new("Frame")
+ContentHolder.Size = UDim2.new(1, -20, 1, -52)
+ContentHolder.Position = UDim2.new(0, 10, 0, 42)
+ContentHolder.BackgroundTransparency = 1
+ContentHolder.Parent = MainFrame
 
-    closeBtn.MouseButton1Click:Connect(function()
-        print("[SailorPieceHub] GUI closed")
-        screenGui:Destroy()
-    end)
+-- кастомный drag + флаг для слайдера
+local draggingMain = false
+local dragStart, startPos
+local IsDraggingSlider = false
 
-    --------------------------------------------------
-    -- Тоггл GUI на G
-    --------------------------------------------------
-
-    UIS.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
-        if input.KeyCode == Enum.KeyCode.G then
-            if screenGui and screenGui.Parent then
-                screenGui.Enabled = not screenGui.Enabled
-                print("[SailorPieceHub] GUI toggled, Enabled =", screenGui.Enabled)
-            end
-        end
-    end)
-
-    --------------------------------------------------
-    -- Tabs + Content
-    --------------------------------------------------
-
-    local tabBar = Instance.new("Frame")
-    tabBar.Size = UDim2.new(1, 0, 0, 28)
-    tabBar.Position = UDim2.new(0, 0, 0, 30)
-    tabBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
-    tabBar.BorderSizePixel = 0
-    tabBar.Parent = mainFrame
-
-    local content = Instance.new("ScrollingFrame")
-    content.Size = UDim2.new(1, -10, 1, -100)
-    content.Position = UDim2.new(0, 5, 0, 60)
-    content.BackgroundTransparency = 1
-    content.BorderSizePixel = 0
-    content.ScrollBarThickness = 6
-    content.Parent = mainFrame
-
-    local bottom = Instance.new("Frame")
-    bottom.Size = UDim2.new(1, 0, 0, 40)
-    bottom.Position = UDim2.new(0, 0, 1, -40)
-    bottom.BackgroundTransparency = 1
-    bottom.Parent = mainFrame
-
-    local function clearContent()
-        for _,v in ipairs(content:GetChildren()) do
-            if v:IsA("GuiObject") then v:Destroy() end
-        end
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not IsDraggingSlider then
+        draggingMain = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
     end
+end)
 
-    local tabs = {"Islands","Mobs","Bosses","NPCs"}
-    local currentTab = "Islands"
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingMain = false
+    end
+end)
 
-    local function makeTabButton(name, index)
-        local b = Instance.new("TextButton")
-        b.Size = UDim2.new(0.25, -2, 1, 0)
-        b.Position = UDim2.new((index-1)*0.25, 0, 0, 0)
-        b.BackgroundColor3 = Color3.fromRGB(40,40,40)
-        b.BorderSizePixel = 0
-        b.Font = Enum.Font.GothamBold
-        b.Text = name
-        b.TextColor3 = Color3.fromRGB(200,200,200)
-        b.TextSize = 12
-        b.Parent = tabBar
+UserInputService.InputChanged:Connect(function(input)
+    if draggingMain and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
-        b.MouseButton1Click:Connect(function()
-            currentTab = name
-            clearContent()
+-- Minimize (tween)
+local isMinimized = false
+local fullSize = MainFrame.Size
+local fullPosition = MainFrame.Position
+local minimizedSize = UDim2.new(fullSize.X.Scale, fullSize.X.Offset, 0, 40)
+local minimizedPosition = fullPosition
+
+local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local currentTween
+
+local function applyMinimize(state)
+    isMinimized = state
+    if currentTween then currentTween:Cancel() end
+
+    if state then
+        ContentHolder.Visible = false
+        currentTween = TweenService:Create(MainFrame, tweenInfo, {
+            Size = minimizedSize,
+            Position = minimizedPosition
+        })
+        currentTween:Play()
+    else
+        currentTween = TweenService:Create(MainFrame, tweenInfo, {
+            Size = fullSize,
+            Position = fullPosition
+        })
+        currentTween:Play()
+        currentTween.Completed:Connect(function()
+            if not isMinimized then
+                ContentHolder.Visible = true
+            end
         end)
     end
+end
 
-    for i,n in ipairs(tabs) do
-        makeTabButton(n, i)
-    end
+MinimizeBtn.MouseButton1Click:Connect(function()
+    applyMinimize(not isMinimized)
+end)
 
-    --------------------------------------------------
-    -- Данные для TP
-    --------------------------------------------------
-
-    local Islands = {
-        {Name="StarterIsland",   CF=CFrame.new(-70.0439301, -1.46258569, -298.787079, 0.139203906, 0, 0.99026376, 0, 1, 0, -0.99026376, 0, 0.139203906)},
-        {Name="SailorIsland",    CF=CFrame.new(182.106186, 5.11968851, 669.524048, 0.987685978, 0, 0.156449571, 0, 1, 0, -0.156449571, 0, 0.987685978)},
-        {Name="JungleIsland",    CF=CFrame.new(-391.223145, -1.45007324, 407.073395, 0.781941295, 0.0115707554, -0.623244643, 1.03516504e-06, 0.999827683, 0.0185634494, 0.623352051, -0.0145161739, 0.781806588)},
-        {Name="DesertIsland",    CF=CFrame.new(-687.025879, -0.750973701, -286.980438, 0.984812498, 0, -0.173621148, 0, 1, 0, 0.173621148, 0, 0.984812498)},
-        {Name="DungeonIsland",   CF=CFrame.new(1272.48401, 5, -896.021423, 0.139203906, 0, 0.99026376, 0, 1, 0, -0.99026376, 0, 0.139203906)},
-        {Name="SnowIsland",      CF=CFrame.new(-181.163071, -0.0750600696, -997.126465, 0.92051065, 0, 0.390717506, 0, 1, 0, -0.390717506, 0, 0.92051065)},
-        {Name="BossIsland",      CF=CFrame.new(593.324219, -1.51174927, -1051.1449, 0.653336763, 0, 0.757067502, 0, 1, 0, -0.757067502, 0, 0.653336763)},
-        {Name="ShibuyaStation",  CF=CFrame.new(1269.92749, 13.1078854, 233.708954, 0.970287263, 0, -0.241955817, 0, 1, 0, 0.241955817, 0, 0.970287263)},
-        {Name="HuecoMundo",      CF=CFrame.new(-541.957031, -0.79920435, 872.745544, 0.893280089, 0, -0.449500531, 0, 1, 0, 0.449500531, 0, 0.893280089)},
-        {Name="ShinjukuIsland",  CF=CFrame.new(189.823303, -0.599565983, -1642.83081, 0.985022426, 0, -0.172426403, 0, 1, 0, 0.172426403, 0, 0.985022426)},
-        {Name="SlimeIsland",     CF=CFrame.new(-981.010498, -1.79893947, 275.525635, 0.842490435, 0, 0.538711369, 0, 1, 0, -0.538711369, 0, 0.842490435)},
-        {Name="AcademyIsland",   CF=CFrame.new(962.332031, -1.91493034, 1053.56201, 0.927179396, 0, 0.374617696, 0, 1, 0, -0.374617696, 0, 0.927179396)},
-        {Name="JudgmentIsland",  CF=CFrame.new(-1028.94714, -1.90999937, -988.707703, 0.573598742, 0, -0.81913656, 0, 1, 0, 0.81913656, 0, 0.573598742)},
-        -- SoulSociety CF добавишь сам
-    }
-
-    local HogyokuFragments = {
-        {"Fragment1", CFrame.new(-424.589447, 56.6024628, -1235.32568, 0.289153755, 0.168311402, 0.942370117, -0.00750803947, 0.984790444, -0.173584118, -0.957253277, 0.0431171507, 0.286019504)},
-        {"Fragment2", CFrame.new(1636.70898, 85.5206757, 247.291901, 0.989795089, 0, -0.142497987, 0, 1, 0, 0.142497987, 0, 0.989795089)},
-        {"Fragment3", CFrame.new(-636.008423, 22.5490417, 1206.28113, 0.923217237, -0.345339119, 0.16855523, 0.381866992, 0.873522758, -0.301886827, -0.0429835021, 0.343072802, 0.938324809)},
-        {"Fragment4", CFrame.new(648.099976, 137.94455, -2069.59741, 0.772088885, -0.631137073, 0.0744634345, 0.628663361, 0.775662899, 0.0559423678, -0.0930658206, 0.00361994654, 0.995653391)},
-        {"Fragment5", CFrame.new(-1206.52283, 30.8849335, 463.206787, 0.993406057, -0.0171359815, 0.113360971, -0.00357546285, 0.983655572, 0.180024818, -0.114593059, -0.179243073, 0.977108181)},
-        {"Fragment6", CFrame.new(-906.39801, 15.7299957, -1260.2478, 0.990366459, 0, -0.138471082, 0, 1, 0, 0.138471082, 0, 0.990366459)},
-    }
-
-    local function tp(cf)
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = cf
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingMain = false
+        if not isMinimized then
+            fullPosition = MainFrame.Position
         end
     end
+end)
 
-    --------------------------------------------------
-    -- Автофарм ядро (NPC's)
-    --------------------------------------------------
+-- SettingsConfig для bind
+_G.SettingsConfig = _G.SettingsConfig or {
+    MenuKey = Enum.KeyCode.G,
+    AutoLoadConfigName = nil,
+}
+local SettingsCfg = _G.SettingsConfig
 
-    local AutoFarm = {
-        Enabled = false,
-        Mode = "nearest",
-        Target = nil,
-        MobNameFilter = {"Mob","Swordsman","Quincy"},
-        Distance = 80,
-        HeightOffset = 5,
-    }
+-- G / MenuKey toggle
+local menuVisible = true
+local function setMenuVisible(state)
+    menuVisible = state
+    ScreenGui.Enabled = state
+end
+setMenuVisible(true)
 
-    function AutoFarm:SetMode(mode)
-        self.Mode = mode
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard
+       and input.KeyCode == SettingsCfg.MenuKey then
+        setMenuVisible(not menuVisible)
+        if menuVisible then
+            applyMinimize(false)
+        end
     end
+end)
 
-    function AutoFarm:SetEnabled(state)
-        self.Enabled = state
-    end
+--------------------------------------------------
+-- LEFT SIDEBAR
+--------------------------------------------------
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 160, 1, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(0, 15, 0)
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = ContentHolder
+round(Sidebar, 4)
+addStroke(Sidebar, 1, Color3.fromRGB(0, 60, 0), 0.2)
 
-    local function isValidCombatNPC(model)
-        if not model:IsA("Model") then return false end
-        if not model:FindFirstChild("Humanoid") then return false end
-        if not model:FindFirstChild("HumanoidRootPart") then return false end
-        if model.Humanoid.Health <= 0 then return false end
-        for _, key in ipairs(AutoFarm.MobNameFilter) do
-            if string.find(string.lower(model.Name), string.lower(key)) then
-                return true
-            end
-        end
-        return false
-    end
+local SideLayout = Instance.new("UIListLayout")
+SideLayout.Parent = Sidebar
+SideLayout.Padding = UDim.new(0, 4)
+SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-    local function getNearestNPCFolder(originPos)
-        local folder = workspace:FindFirstChild("NPC's")
-        if not folder then return nil end
-        local nearest, dist = nil, AutoFarm.Distance
-        for _, npc in ipairs(folder:GetChildren()) do
-            if isValidCombatNPC(npc) then
-                local hrp = npc.HumanoidRootPart
-                local d = (hrp.Position - originPos).Magnitude
-                if d < dist then
-                    dist = d
-                    nearest = npc
-                end
-            end
-        end
-        return nearest
-    end
+local SectionTitle = Instance.new("TextLabel")
+SectionTitle.Size = UDim2.new(1, -10, 0, 24)
+SectionTitle.Position = UDim2.new(0, 5, 0, 4)
+SectionTitle.BackgroundTransparency = 1
+SectionTitle.Font = BOLD_FONT
+SectionTitle.TextSize = 14
+SectionTitle.TextColor3 = TEXT_MAIN
+SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+SectionTitle.Text = "> SECTIONS"
+SectionTitle.Parent = Sidebar
 
-    local function getOffsetCFrame(targetHRP)
-        local base = targetHRP.CFrame
-        local mode = AutoFarm.Mode
-        if mode == "above" then
-            return base * CFrame.new(0, AutoFarm.HeightOffset, 0)
-        elseif mode == "below" then
-            return base * CFrame.new(0, -AutoFarm.HeightOffset, 0)
-        elseif mode == "back" then
-            return base * CFrame.new(0, 0, -AutoFarm.HeightOffset)
-        elseif mode == "nearest" then
-            return base * CFrame.new(0, AutoFarm.HeightOffset, 0)
-        end
-        return base
-    end
+local ButtonsHolder = Instance.new("Frame")
+ButtonsHolder.Size = UDim2.new(1, -10, 1, -30)
+ButtonsHolder.Position = UDim2.new(0, 5, 0, 28)
+ButtonsHolder.BackgroundTransparency = 1
+ButtonsHolder.Parent = Sidebar
 
-    RunService.Heartbeat:Connect(function()
-        if not AutoFarm.Enabled then return end
-        local char = LocalPlayer.Character
-        if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
-        local myHRP = char.HumanoidRootPart
+local ButtonsLayout = Instance.new("UIListLayout")
+ButtonsLayout.Parent = ButtonsHolder
+ButtonsLayout.Padding = UDim.new(0, 3)
+ButtonsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-        if not AutoFarm.Target
-            or not AutoFarm.Target.Parent
-            or not AutoFarm.Target:FindFirstChild("Humanoid")
-            or AutoFarm.Target.Humanoid.Health <= 0
-        then
-            AutoFarm.Target = getNearestNPCFolder(myHRP.Position)
-        end
-
-        local target = AutoFarm.Target
-        if target and target:FindFirstChild("HumanoidRootPart") then
-            local goalCF = getOffsetCFrame(target.HumanoidRootPart)
-            myHRP.CFrame = goalCF
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool then pcall(function() tool:Activate() end) end
-        end
-    end)
-
-    --------------------------------------------------
-    -- Построение вкладок
-    --------------------------------------------------
-
-    local function buildIslandsTab()
-        clearContent()
-        local y = 0
-        for _, isl in ipairs(Islands) do
-            local b = Instance.new("TextButton")
-            b.Size = UDim2.new(1, -10, 0, 28)
-            b.Position = UDim2.new(0, 0, 0, y)
-            b.BackgroundColor3 = Color3.fromRGB(0,140,0)
-            b.BorderSizePixel = 0
-            b.Font = Enum.Font.Gotham
-            b.Text = "TP: "..isl.Name
-            b.TextColor3 = Color3.new(1,1,1)
-            b.TextSize = 14
-            b.Parent = content
-            b.MouseButton1Click:Connect(function()
-                tp(isl.CF)
-            end)
-            y = y + 30
-        end
-
-        for _, data in ipairs(HogyokuFragments) do
-            local b = Instance.new("TextButton")
-            b.Size = UDim2.new(1, -10, 0, 28)
-            b.Position = UDim2.new(0, 0, 0, y)
-            b.BackgroundColor3 = Color3.fromRGB(120,60,0)
-            b.BorderSizePixel = 0
-            b.Font = Enum.Font.Gotham
-            b.Text = "TP Hogyoku "..data[1]
-            b.TextColor3 = Color3.new(1,1,1)
-            b.TextSize = 14
-            b.Parent = content
-            b.MouseButton1Click:Connect(function()
-                tp(data[2])
-            end)
-            y = y + 30
-        end
-
-        content.CanvasSize = UDim2.new(0,0,0,y+10)
-    end
-
-    local function buildMobsTab()
-        clearContent()
-        local y = 0
-        local modes = {"nearest","above","back","below"}
-        for _, m in ipairs(modes) do
-            local b = Instance.new("TextButton")
-            b.Size = UDim2.new(1, -10, 0, 28)
-            b.Position = UDim2.new(0, 0, 0, y)
-            b.BackgroundColor3 = Color3.fromRGB(60,60,110)
-            b.BorderSizePixel = 0
-            b.Font = Enum.Font.Gotham
-            b.Text = "Mode: "..m
-            b.TextColor3 = Color3.new(1,1,1)
-            b.TextSize = 14
-            b.Parent = content
-            b.MouseButton1Click:Connect(function()
-                AutoFarm:SetMode(m)
-            end)
-            y = y + 30
-        end
-
-        local lab = Instance.new("TextLabel")
-        lab.Size = UDim2.new(1, -10, 0, 40)
-        lab.Position = UDim2.new(0, 0, 0, y+5)
-        lab.BackgroundTransparency = 1
-        lab.Font = Enum.Font.Gotham
-        lab.Text = "Mob filter:\nMob, Swordsman, Quincy"
-        lab.TextColor3 = Color3.new(1,1,1)
-        lab.TextSize = 14
-        lab.TextWrapped = true
-        lab.Parent = content
-
-        content.CanvasSize = UDim2.new(0,0,0,y+60)
-    end
-
-    local function buildBossesTab()
-        clearContent()
-        local folder = workspace:FindFirstChild("NPC's")
-        local y = 0
-        if folder then
-            for _, npc in ipairs(folder:GetChildren()) do
-                if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
-                    local b = Instance.new("TextButton")
-                    b.Size = UDim2.new(1, -10, 0, 28)
-                    b.Position = UDim2.new(0, 0, 0, y)
-                    b.BackgroundColor3 = Color3.fromRGB(120,0,0)
-                    b.BorderSizePixel = 0
-                    b.Font = Enum.Font.Gotham
-                    b.Text = "TP Boss: "..npc.Name
-                    b.TextColor3 = Color3.new(1,1,1)
-                    b.TextSize = 14
-                    b.Parent = content
-                    b.MouseButton1Click:Connect(function()
-                        local hrp = npc:FindFirstChild("HumanoidRootPart")
-                        if hrp then
-                            tp(hrp.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
-                        end
-                    end)
-                    y = y + 30
-                end
-            end
-        end
-        content.CanvasSize = UDim2.new(0,0,0,y+10)
-    end
-
-    local function buildNPCsTab()
-        clearContent()
-        local folder = workspace:FindFirstChild("ServiceNPC's")
-        local y = 0
-        if folder then
-            for _, npc in ipairs(folder:GetChildren()) do
-                if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then
-                    local b = Instance.new("TextButton")
-                    b.Size = UDim2.new(1, -10, 0, 28)
-                    b.Position = UDim2.new(0, 0, 0, y)
-                    b.BackgroundColor3 = Color3.fromRGB(0,80,140)
-                    b.BorderSizePixel = 0
-                    b.Font = Enum.Font.Gotham
-                    b.Text = "TP NPC: "..npc.Name
-                    b.TextColor3 = Color3.new(1,1,1)
-                    b.TextSize = 14
-                    b.Parent = content
-                    b.MouseButton1Click:Connect(function()
-                        tp(npc.HumanoidRootPart.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
-                    end)
-                    y = y + 30
-                end
-            end
-        end
-        content.CanvasSize = UDim2.new(0,0,0,y+10)
-    end
-
-    -- первая вкладка по умолчанию
-    buildIslandsTab()
-
-    -- обновление контента при смене таба
-    RunService.RenderStepped:Connect(function()
-        if currentTab == "Islands" then
-            if not content:FindFirstChildOfClass("TextButton") then
-                buildIslandsTab()
-            end
-        elseif currentTab == "Mobs" then
-            if not content:FindFirstChildOfClass("TextButton") then
-                buildMobsTab()
-            end
-        elseif currentTab == "Bosses" then
-            if not content:FindFirstChildOfClass("TextButton") then
-                buildBossesTab()
-            end
-        elseif currentTab == "NPCs" then
-            if not content:FindFirstChildOfClass("TextButton") then
-                buildNPCsTab()
-            end
-        end
-    end)
-
-    -- нижний тоггл автофарма
-    local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(1,-20,0,30)
-    toggle.Position = UDim2.new(0,10,0,5)
-    toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-    toggle.BorderSizePixel = 0
-    toggle.Font = Enum.Font.GothamBold
-    toggle.Text = "AutoFarm: OFF"
-    toggle.TextColor3 = Color3.new(1,1,1)
-    toggle.TextSize = 14
-    toggle.Parent = bottom
-
-    toggle.MouseButton1Click:Connect(function()
-        AutoFarm.Enabled = not AutoFarm.Enabled
-        toggle.Text = "AutoFarm: "..(AutoFarm.Enabled and "ON" or "OFF")
-        toggle.BackgroundColor3 = AutoFarm.Enabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
-    end)
-
-    print("[SailorPieceHub] Loaded")
+local function createSideButton(text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 22)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 30, 0)
+    btn.BorderSizePixel = 0
+    btn.Text = text
+    btn.Font = REGULAR_FONT
+    btn.TextSize = 13
+    btn.TextColor3 = TEXT_SUB
+    btn.AutoButtonColor = false
+    btn.Parent = ButtonsHolder
+    round(btn, 3)
+    addStroke(btn, 1, Color3.fromRGB(0, 60, 0), 0.4)
+    return btn
 end
 
 --------------------------------------------------
--- Запуск: сначала welcome, потом GUI
+-- RIGHT MAIN PANEL (центр)
 --------------------------------------------------
+local RightPanel = Instance.new("Frame")
+RightPanel.Size = UDim2.new(1, -170 - 230, 1, 0) -- минус левый и правый сайдбар
+RightPanel.Position = UDim2.new(0, 170, 0, 0)
+RightPanel.BackgroundTransparency = 1
+RightPanel.Parent = ContentHolder
 
-showWelcomeAndThen(createMainGui)
+local Panels = {}
+local sectionButtons = {}
+local currentSection = "Main"
+
+local function setSection(name)
+    currentSection = name
+    for sec, btn in pairs(sectionButtons) do
+        if sec == name then
+            btn.BackgroundColor3 = ACCENT_COLOR
+            btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(0, 30, 0)
+            btn.TextColor3 = TEXT_SUB
+        end
+    end
+    for n, panel in pairs(Panels) do
+        panel.Visible = (n == name)
+    end
+end
+
+--------------------------------------------------
+-- BASE CONTROLS
+--------------------------------------------------
+local function ToggleSwitch(parent, labelText, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 24)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = REGULAR_FONT
+    label.TextSize = 13
+    label.TextColor3 = TEXT_MAIN
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = labelText
+    label.Parent = frame
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 46, 0, 18)
+    btn.Position = UDim2.new(1, -48, 0.5, -9)
+    btn.BackgroundColor3 = default and ACCENT_COLOR or Color3.fromRGB(0, 40, 0)
+    btn.BorderSizePixel = 0
+    btn.Text = default and "ON" or "OFF"
+    btn.Font = BOLD_FONT
+    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    btn.Parent = frame
+    round(btn, 9)
+
+    local state = default
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and ACCENT_COLOR or Color3.fromRGB(0, 40, 0)
+        btn.Text = state and "ON" or "OFF"
+        if callback then
+            pcall(callback, state)
+        end
+    end)
+
+    return frame
+end
+
+local function SliderBar(parent, labelText, min, max, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 38)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 18)
+    label.BackgroundTransparency = 1
+    label.Font = REGULAR_FONT
+    label.TextSize = 13
+    label.TextColor3 = TEXT_MAIN
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = labelText .. " (" .. tostring(default) .. ")"
+    label.Parent = frame
+
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(1, -10, 0, 6)
+    bar.Position = UDim2.new(0, 5, 0, 22)
+    bar.BackgroundColor3 = Color3.fromRGB(0, 40, 0)
+    bar.BorderSizePixel = 0
+    bar.Parent = frame
+    round(bar, 3)
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default-min)/(max-min), 0, 1, 0)
+    fill.BackgroundColor3 = ACCENT_COLOR
+    fill.BorderSizePixel = 0
+    fill.Parent = bar
+    round(fill, 3)
+
+    local dragging = false
+
+    local function setValueFromX(x)
+        local rel = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+        local value = min + (max - min) * rel
+        fill.Size = UDim2.new(rel, 0, 1, 0)
+        label.Text = labelText .. " (" .. string.format("%.2f", value) .. ")"
+        if callback then
+            pcall(callback, value)
+        end
+    end
+
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            IsDraggingSlider = true
+            setValueFromX(input.Position.X)
+        end
+    end)
+
+    bar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            IsDraggingSlider = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            setValueFromX(input.Position.X)
+        end
+    end)
+
+    if callback then
+        pcall(callback, default)
+    end
+
+    return frame
+end
+
+local function DropdownSimple(parent, labelText, options, defaultIndex, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 24)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.4, -5, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = REGULAR_FONT
+    label.TextSize = 13
+    label.TextColor3 = TEXT_MAIN
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = labelText
+    label.Parent = frame
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.6, 0, 1, 0)
+    btn.Position = UDim2.new(0.4, 0, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 30, 0)
+    btn.BorderSizePixel = 0
+    btn.Font = REGULAR_FONT
+    btn.TextSize = 13
+    btn.TextColor3 = TEXT_SUB
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Text = options[defaultIndex] or ""
+    btn.Parent = frame
+    round(btn, 3)
+    addStroke(btn, 1, Color3.fromRGB(0, 60, 0), 0.4)
+
+    local open = false
+    local listFrame
+
+    local function setOption(opt)
+        btn.Text = opt
+        if callback then
+            pcall(callback, opt)
+        end
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        if open then
+            if listFrame then listFrame:Destroy() end
+            open = false
+            return
+        end
+        open = true
+
+        listFrame = Instance.new("Frame")
+        listFrame.Size = UDim2.new(1, 0, 0, math.min(#options*20+4, 140))
+        listFrame.Position = UDim2.new(0, 0, 1, 2)
+        listFrame.BackgroundColor3 = Color3.fromRGB(0, 10, 0)
+        listFrame.BorderSizePixel = 0
+        listFrame.Parent = btn
+        round(listFrame, 3)
+        addStroke(listFrame, 1, Color3.fromRGB(0, 60, 0), 0.6)
+
+        local scroll = Instance.new("ScrollingFrame")
+        scroll.Size = UDim2.new(1, -4, 1, -4)
+        scroll.Position = UDim2.new(0, 2, 0, 2)
+        scroll.BackgroundTransparency = 1
+        scroll.ScrollBarThickness = 3
+        scroll.CanvasSize = UDim2.new(0,0,0,0)
+        scroll.Parent = listFrame
+
+        local layout = Instance.new("UIListLayout")
+        layout.Parent = scroll
+        layout.Padding = UDim.new(0, 2)
+
+        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y)
+        end)
+
+        for _, opt in ipairs(options) do
+            local oBtn = Instance.new("TextButton")
+            oBtn.Size = UDim2.new(1, 0, 0, 18)
+            oBtn.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+            oBtn.BorderSizePixel = 0
+            oBtn.Font = REGULAR_FONT
+            oBtn.TextSize = 12
+            oBtn.TextColor3 = TEXT_SUB
+            oBtn.TextXAlignment = Enum.TextXAlignment.Left
+            oBtn.Text = opt
+            oBtn.Parent = scroll
+            round(oBtn, 2)
+
+            oBtn.MouseButton1Click:Connect(function()
+                setOption(opt)
+                listFrame:Destroy()
+                open = false
+            end)
+        end
+    end)
+
+    setOption(options[defaultIndex] or options[1])
+
+    return frame
+end
+
+--------------------------------------------------
+-- CONFIG TABLES
+--------------------------------------------------
+_G.MainConfig = _G.MainConfig or {}
+local MainCfg = _G.MainConfig
+
+_G.CombatConfig = _G.CombatConfig or {
+    EnableKillAura = false,
+    EnableAutoHaki  = false,
+    ArmamentHaki    = false,
+    ObservationHaki = false,
+    ConquerorHaki   = false,
+    HakiInterval    = 5,
+    EnableAutoSkills = false,
+    UseZ = false,
+    UseX = false,
+    UseC = false,
+    UseV = false,
+    ZCooldown = 5,
+    XCooldown = 10,
+    CCooldown = 20,
+    VCooldown = 30,
+    AutoEquipWeapons = false,
+    WeaponType = "Melee",
+}
+local CombatCfg = _G.CombatConfig
+
+_G.FarmConfig = _G.FarmConfig or {
+    SelectedQuest = "Thief Hunter (Lv. 0)",
+    EnableAutoFarm = false,
+    HoverHeight    = 15,
+    SelectedBoss   = "SaberBoss",
+    BossDifficulty = "Normal",
+    EnableAutoSummonBoss = false,
+    BossAttackHeight     = 15,
+}
+local FarmCfg = _G.FarmConfig
+
+_G.QuestConfig = _G.QuestConfig or {
+    AutoDemoniteEvent    = false,
+    AutoSlimeEvent       = false,
+    AutoDungeonDiscovery = false,
+}
+local QuestCfg = _G.QuestConfig
+
+_G.StatsConfig = _G.StatsConfig or {
+    EnableAutoStats     = false,
+    SelectedStat        = "Melee",
+    PointsPerAllocation = 1,
+    Interval            = 0.5,
+}
+local StatsCfg = _G.StatsConfig
+
+_G.TeleportConfig = _G.TeleportConfig or {
+    SavedPosition = nil,
+}
+local TeleportCfg = _G.TeleportConfig
+
+--------------------------------------------------
+-- RIGHT SIDEBAR (PROFILE + STATS)
+--------------------------------------------------
+local RightSidebar = Instance.new("Frame")
+RightSidebar.Size = UDim2.new(0, 230, 1, -36)
+RightSidebar.Position = UDim2.new(1, -240, 0, 30)
+RightSidebar.BackgroundColor3 = PANEL_COLOR
+RightSidebar.BackgroundTransparency = 0.05
+RightSidebar.BorderSizePixel = 0
+RightSidebar.Parent = MainFrame
+round(RightSidebar, 4)
+addStroke(RightSidebar, 1, Color3.fromRGB(0, 60, 0), 0.3)
+
+local ProfileFrame = Instance.new("Frame")
+ProfileFrame.Size = UDim2.new(1, -20, 0, 70)
+ProfileFrame.Position = UDim2.new(0, 10, 0, 10)
+ProfileFrame.BackgroundColor3 = PANEL_DARK
+ProfileFrame.BackgroundTransparency = 0.1
+ProfileFrame.BorderSizePixel = 0
+ProfileFrame.Parent = RightSidebar
+round(ProfileFrame, 4)
+
+local Avatar = Instance.new("ImageLabel")
+Avatar.Size = UDim2.new(0, 40, 0, 40)
+Avatar.Position = UDim2.new(0, 8, 0.5, -20)
+Avatar.BackgroundTransparency = 1
+Avatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=150&h=150"
+Avatar.Parent = ProfileFrame
+
+local NameLabel = Instance.new("TextLabel")
+NameLabel.Size = UDim2.new(1, -60, 0, 18)
+NameLabel.Position = UDim2.new(0, 56, 0, 8)
+NameLabel.BackgroundTransparency = 1
+NameLabel.Font = REGULAR_FONT
+NameLabel.TextSize = 13
+NameLabel.TextColor3 = TEXT_MAIN
+NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+NameLabel.Text = "@ ".. LocalPlayer.Name
+NameLabel.Parent = ProfileFrame
+
+-- STATS under profile
+local StatsFrame = Instance.new("Frame")
+StatsFrame.Size = UDim2.new(1, -20, 0, 90)
+StatsFrame.Position = UDim2.new(0, 10, 0, 90)
+StatsFrame.BackgroundColor3 = PANEL_DARK
+StatsFrame.BackgroundTransparency = 0.1
+StatsFrame.BorderSizePixel = 0
+StatsFrame.Parent = RightSidebar
+round(StatsFrame, 4)
+
+local statsLayout = Instance.new("UIListLayout")
+statsLayout.Parent = StatsFrame
+statsLayout.Padding = UDim.new(0, 2)
+statsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local function makeStatLabel(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -10, 0, 16)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = REGULAR_FONT
+    lbl.TextSize = 13
+    lbl.TextColor3 = TEXT_MAIN
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.Parent = StatsFrame
+    return lbl
+end
+
+local fpsLabel    = makeStatLabel("FPS: 0")
+local pingLabel   = makeStatLabel("Ping: 0 ms")
+local levelLabel  = makeStatLabel("Level: 0")
+local bountyLabel = makeStatLabel("Bounty: 0")
+local hoursLabel  = makeStatLabel("Script uptime: 0.00 h")
+
+local scriptStartTime = tick()
+local framesCounter = 0
+
+RunService.RenderStepped:Connect(function()
+    framesCounter += 1
+end)
+
+task.spawn(function()
+    while true do
+        local fps = framesCounter
+        framesCounter = 0
+        fpsLabel.Text = ("FPS: %d"):format(fps)
+
+        local pingMs = 0   -- свою реализацию ping сюда
+        pingLabel.Text = ("Ping: %d ms"):format(pingMs)
+
+        local level = 0
+        local bounty = 0
+        pcall(function()
+            local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+            if leaderstats then
+                local lvlValue = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("Lvl")
+                if lvlValue then level = lvlValue.Value end
+                local bountyValue = leaderstats:FindFirstChild("Bounty")
+                if bountyValue then bounty = bountyValue.Value end
+            end
+        end)
+        levelLabel.Text  = ("Level: %s"):format(level)
+        bountyLabel.Text = ("Bounty: %s"):format(bounty)
+
+        local elapsed = tick() - scriptStartTime
+        local hours = elapsed / 3600
+        hoursLabel.Text = ("Script uptime: %.2f h"):format(hours)
+
+        task.wait(1)
+    end
+end)
+
+--------------------------------------------------
+-- MAIN PANEL (заглушка)
+--------------------------------------------------
+local MainPanel = Instance.new("Frame")
+MainPanel.Size = UDim2.new(1, 0, 1, 0)
+MainPanel.BackgroundColor3 = PANEL_COLOR
+MainPanel.BorderSizePixel = 0
+MainPanel.Parent = RightPanel
+round(MainPanel, 4)
+Panels["Main"] = MainPanel
+
+local function BuildMainPanel(parent)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Font = BOLD_FONT
+    label.TextSize = 18
+    label.TextColor3 = TEXT_MAIN
+    label.Text = "> MAIN PANEL (сюда твой фарм/данжи)"
+    label.Parent = parent
+end
+
+BuildMainPanel(MainPanel)
+
+--------------------------------------------------
+-- COMBAT PANEL
+--------------------------------------------------
+local CombatPanel = Instance.new("Frame")
+CombatPanel.Size = UDim2.new(1, 0, 1, 0)
+CombatPanel.BackgroundColor3 = PANEL_COLOR
+CombatPanel.BorderSizePixel = 0
+CombatPanel.Parent = RightPanel
+round(CombatPanel,4)
+CombatPanel.Visible = false
+Panels["Combat"] = CombatPanel
+
+local function BuildCombatPanel(parent)
+    local container = Instance.new("ScrollingFrame")
+    container.Size = UDim2.new(1, -20, 1, -20)
+    container.Position = UDim2.new(0, 10, 0, 10)
+    container.BackgroundTransparency = 1
+    container.ScrollBarThickness = 4
+    container.CanvasSize = UDim2.new(0,0,0,0)
+    container.Parent = parent
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0,8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        container.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
+    end)
+
+    -- Kill Aura
+    local auraFrame = Instance.new("Frame")
+    auraFrame.Size = UDim2.new(1, 0, 0, 80)
+    auraFrame.BackgroundColor3 = PANEL_DARK
+    auraFrame.BorderSizePixel = 0
+    auraFrame.Parent = container
+    round(auraFrame,4)
+
+    local auraTitle = Instance.new("TextLabel")
+    auraTitle.Size = UDim2.new(1, -12, 0, 20)
+    auraTitle.Position = UDim2.new(0,6,0,4)
+    auraTitle.BackgroundTransparency = 1
+    auraTitle.Font = BOLD_FONT
+    auraTitle.TextSize = 14
+    auraTitle.TextColor3 = TEXT_MAIN
+    auraTitle.TextXAlignment = Enum.TextXAlignment.Left
+    auraTitle.Text = "> KILL AURA"
+    auraTitle.Parent = auraFrame
+
+    local auraContent = Instance.new("Frame")
+    auraContent.Size = UDim2.new(1, -12, 1, -26)
+    auraContent.Position = UDim2.new(0,6,0,24)
+    auraContent.BackgroundTransparency = 1
+    auraContent.Parent = auraFrame
+
+    ToggleSwitch(auraContent,"Enable Kill Aura",CombatCfg.EnableKillAura,function(v)
+        CombatCfg.EnableKillAura = v
+    end)
+
+    -- Auto Haki
+    local hakiFrame = Instance.new("Frame")
+    hakiFrame.Size = UDim2.new(1, 0, 0, 200)
+    hakiFrame.BackgroundColor3 = PANEL_DARK
+    hakiFrame.BorderSizePixel = 0
+    hakiFrame.Parent = container
+    round(hakiFrame,4)
+
+    local hakiTitle = auraTitle:Clone()
+    hakiTitle.Text = "> AUTO HAKI"
+    hakiTitle.Parent = hakiFrame
+
+    local hakiContent = Instance.new("Frame")
+    hakiContent.Size = UDim2.new(1, -12, 1, -26)
+    hakiContent.Position = UDim2.new(0,6,0,24)
+    hakiContent.BackgroundTransparency = 1
+    hakiContent.Parent = hakiFrame
+
+    local hakiLayout = Instance.new("UIListLayout")
+    hakiLayout.Parent = hakiContent
+    hakiLayout.Padding = UDim.new(0,4)
+
+    ToggleSwitch(hakiContent,"Enable Auto Haki",CombatCfg.EnableAutoHaki,function(v)
+        CombatCfg.EnableAutoHaki = v
+    end)
+    ToggleSwitch(hakiContent,"Armament Haki",CombatCfg.ArmamentHaki,function(v)
+        CombatCfg.ArmamentHaki = v
+    end)
+    ToggleSwitch(hakiContent,"Observation Haki",CombatCfg.ObservationHaki,function(v)
+        CombatCfg.ObservationHaki = v
+    end)
+    ToggleSwitch(hakiContent,"Conqueror Haki",CombatCfg.ConquerorHaki,function(v)
+        CombatCfg.ConquerorHaki = v
+    end)
+
+    SliderBar(hakiContent,"Interval (seconds)",1,120,CombatCfg.HakiInterval,function(v)
+        CombatCfg.HakiInterval = v
+    end)
+
+    -- Auto Skills
+    local skillsFrame = Instance.new("Frame")
+    skillsFrame.Size = UDim2.new(1, 0, 0, 230)
+    skillsFrame.BackgroundColor3 = PANEL_DARK
+    skillsFrame.BorderSizePixel = 0
+    skillsFrame.Parent = container
+    round(skillsFrame,4)
+
+    local skillsTitle = auraTitle:Clone()
+    skillsTitle.Text = "> AUTO SKILLS"
+    skillsTitle.Parent = skillsFrame
+
+    local skillsContent = Instance.new("Frame")
+    skillsContent.Size = UDim2.new(1, -12, 1, -26)
+    skillsContent.Position = UDim2.new(0,6,0,24)
+    skillsContent.BackgroundTransparency = 1
+    skillsContent.Parent = skillsFrame
+
+    local scLayout = Instance.new("UIListLayout")
+    scLayout.Parent = skillsContent
+    scLayout.Padding = UDim.new(0,4)
+
+    ToggleSwitch(skillsContent,"Enable Auto Skills",CombatCfg.EnableAutoSkills,function(v)
+        CombatCfg.EnableAutoSkills = v
+    end)
+    ToggleSwitch(skillsContent,"Use Z Skill",CombatCfg.UseZ,function(v)
+        CombatCfg.UseZ = v
+    end)
+    ToggleSwitch(skillsContent,"Use X Skill",CombatCfg.UseX,function(v)
+        CombatCfg.UseX = v
+    end)
+    ToggleSwitch(skillsContent,"Use C Skill",CombatCfg.UseC,function(v)
+        CombatCfg.UseC = v
+    end)
+    ToggleSwitch(skillsContent,"Use V Skill",CombatCfg.UseV,function(v)
+        CombatCfg.UseV = v
+    end)
+
+    SliderBar(skillsContent,"Z Cooldown",1,30,CombatCfg.ZCooldown,function(v)
+        CombatCfg.ZCooldown = v
+    end)
+    SliderBar(skillsContent,"X Cooldown",1,60,CombatCfg.XCooldown,function(v)
+        CombatCfg.XCooldown = v
+    end)
+    SliderBar(skillsContent,"C Cooldown",1,90,CombatCfg.CCooldown,function(v)
+        CombatCfg.CCooldown = v
+    end)
+    SliderBar(skillsContent,"V Cooldown",1,120,CombatCfg.VCooldown,function(v)
+        CombatCfg.VCooldown = v
+    end)
+
+    -- Auto Equip
+    local equipFrame = Instance.new("Frame")
+    equipFrame.Size = UDim2.new(1, 0, 0, 120)
+    equipFrame.BackgroundColor3 = PANEL_DARK
+    equipFrame.BorderSizePixel = 0
+    equipFrame.Parent = container
+    round(equipFrame,4)
+
+    local equipTitle = auraTitle:Clone()
+    equipTitle.Text = "> AUTO EQUIP WEAPONS"
+    equipTitle.Parent = equipFrame
+
+    local equipContent = Instance.new("Frame")
+    equipContent.Size = UDim2.new(1, -12, 1, -26)
+    equipContent.Position = UDim2.new(0,6,0,24)
+    equipContent.BackgroundTransparency = 1
+    equipContent.Parent = equipFrame
+
+    local ecLayout = Instance.new("UIListLayout")
+    ecLayout.Parent = equipContent
+    ecLayout.Padding = UDim.new(0,4)
+
+    ToggleSwitch(equipContent,"Auto Equip Weapons",CombatCfg.AutoEquipWeapons,function(v)
+        CombatCfg.AutoEquipWeapons = v
+    end)
+
+    DropdownSimple(equipContent,"Weapon Type",{"Melee","Sword","Devil Fruits"},1,function(opt)
+        CombatCfg.WeaponType = opt
+    end)
+end
+
+BuildCombatPanel(CombatPanel)
+
+--------------------------------------------------
+-- FARM PANEL
+--------------------------------------------------
+local FarmPanel = Instance.new("Frame")
+FarmPanel.Size = UDim2.new(1, 0, 1, 0)
+FarmPanel.BackgroundColor3 = PANEL_COLOR
+FarmPanel.BorderSizePixel = 0
+FarmPanel.Parent = RightPanel
+round(FarmPanel,4)
+FarmPanel.Visible = false
+Panels["Farm"] = FarmPanel
+
+local function BuildFarmPanel(parent)
+    local container = Instance.new("ScrollingFrame")
+    container.Size = UDim2.new(1, -20, 1, -20)
+    container.Position = UDim2.new(0, 10, 0, 10)
+    container.BackgroundTransparency = 1
+    container.ScrollBarThickness = 4
+    container.CanvasSize = UDim2.new(0,0,0,0)
+    container.Parent = parent
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0,8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        container.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
+    end)
+
+    -- Auto Farm
+    local afFrame = Instance.new("Frame")
+    afFrame.Size = UDim2.new(1, 0, 0, 220)
+    afFrame.BackgroundColor3 = PANEL_DARK
+    afFrame.BorderSizePixel = 0
+    afFrame.Parent = container
+    round(afFrame,4)
+
+    local afTitle = Instance.new("TextLabel")
+    afTitle.Size = UDim2.new(1, -12, 0, 20)
+    afTitle.Position = UDim2.new(0,6,0,4)
+    afTitle.BackgroundTransparency = 1
+    afTitle.Font = BOLD_FONT
+    afTitle.TextSize = 14
+    afTitle.TextColor3 = TEXT_MAIN
+    afTitle.TextXAlignment = Enum.TextXAlignment.Left
+    afTitle.Text = "> AUTO FARM"
+    afTitle.Parent = afFrame
+
+    local afContent = Instance.new("Frame")
+    afContent.Size = UDim2.new(1, -12, 1, -26)
+    afContent.Position = UDim2.new(0,6,0,24)
+    afContent.BackgroundTransparency = 1
+    afContent.Parent = afFrame
+
+    local afLayout = Instance.new("UIListLayout")
+    afLayout.Parent = afContent
+    afLayout.Padding = UDim.new(0,4)
+
+    local questList = {
+        "Thief Hunter (Lv. 0)",
+        "[Boss] Thief Boss (Lv.100)",
+        "Monkey Hunet (Lv. 250)",
+        "[Boss] Monkey Boss (Lv.500)",
+        "Desert Bandit Hunter (Lv.750)",
+        "[Boss] Desert Bandit Boss (Lv.1000)",
+        "Frost Rogue Hunter (Lv.1500)",
+        "[Boss] Winter Warden Boss (Lv.2000)",
+        "Sorcerer Hunter (Lv.3000)",
+        "[Boss] Panda Sorcerer Boss (Lv.4000)",
+        "Hollow Hunter (Lv.5000)",
+        "Strong Sorcerer Hunter (Lv.6000)",
+        "Curse Hunter (Lv.7000)",
+        "Slime Warrior Hunter (Lv.8000)",
+        "Academy Challenge (Lv.9000)",
+        "Swordsman (Lv.10000)",
+        "[Boss] Yamato Boss (Lv.11000)",
+        "Quincy (Lv.10750)",
+    }
+
+    DropdownSimple(afContent,"Select Quest",questList,1,function(opt)
+        FarmCfg.SelectedQuest = opt
+    end)
+
+    ToggleSwitch(afContent,"Enable Auto Farm",FarmCfg.EnableAutoFarm,function(v)
+        FarmCfg.EnableAutoFarm = v
+    end)
+
+    SliderBar(afContent,"Hover Height",5,50,FarmCfg.HoverHeight,function(v)
+        FarmCfg.HoverHeight = v
+    end)
+
+    -- Auto Summon Boss
+    local bossFrame = Instance.new("Frame")
+    bossFrame.Size = UDim2.new(1, 0, 0, 200)
+    bossFrame.BackgroundColor3 = PANEL_DARK
+    bossFrame.BorderSizePixel = 0
+    bossFrame.Parent = container
+    round(bossFrame,4)
+
+    local bossTitle = afTitle:Clone()
+    bossTitle.Text = "> AUTO SUMMON BOSS"
+    bossTitle.Parent = bossFrame
+
+    local bossContent = Instance.new("Frame")
+    bossContent.Size = UDim2.new(1, -12, 1, -26)
+    bossContent.Position = UDim2.new(0,6,0,24)
+    bossContent.BackgroundTransparency = 1
+    bossContent.Parent = bossFrame
+
+    local bLayout = Instance.new("UIListLayout")
+    bLayout.Parent = bossContent
+    bLayout.Padding = UDim.new(0,4)
+
+    local bossList = {
+        "SaberBoss",
+        "QinShiBoss",
+        "IchigoBoss",
+        "GilgameshBoss",
+        "BlessedMaidenBoss",
+    }
+
+    DropdownSimple(bossContent,"Select Boss",bossList,1,function(opt)
+        FarmCfg.SelectedBoss = opt
+    end)
+
+    DropdownSimple(bossContent,"Difficulty",{"Normal","Medium","Hard","Extreme"},1,function(opt)
+        FarmCfg.BossDifficulty = opt
+    end)
+
+    ToggleSwitch(bossContent,"Enable Auto Summon Boss",FarmCfg.EnableAutoSummonBoss,function(v)
+        FarmCfg.EnableAutoSummonBoss = v
+    end)
+
+    SliderBar(bossContent,"Attack Height",5,50,FarmCfg.BossAttackHeight,function(v)
+        FarmCfg.BossAttackHeight = v
+    end)
+end
+
+BuildFarmPanel(FarmPanel)
+
+--------------------------------------------------
+-- AUTO QUEST PANEL
+--------------------------------------------------
+local AutoQuestPanel = Instance.new("Frame")
+AutoQuestPanel.Size = UDim2.new(1, 0, 1, 0)
+AutoQuestPanel.BackgroundColor3 = PANEL_COLOR
+AutoQuestPanel.BorderSizePixel = 0
+AutoQuestPanel.Parent = RightPanel
+round(AutoQuestPanel,4)
+AutoQuestPanel.Visible = false
+Panels["Auto Quest"] = AutoQuestPanel
+
+local function BuildAutoQuestPanel(parent)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 1, -20)
+    container.Position = UDim2.new(0, 10, 0, 10)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0,8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 140)
+    frame.BackgroundColor3 = PANEL_DARK
+    frame.BorderSizePixel = 0
+    frame.Parent = container
+    round(frame,4)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -12, 0, 20)
+    title.Position = UDim2.new(0,6,0,4)
+    title.BackgroundTransparency = 1
+    title.Font = BOLD_FONT
+    title.TextSize = 14
+    title.TextColor3 = TEXT_MAIN
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = "> AUTO QUEST"
+    title.Parent = frame
+
+    local content = Instance.new("Frame")
+    content.Size = UDim2.new(1, -12, 1, -26)
+    content.Position = UDim2.new(0,6,0,24)
+    content.BackgroundTransparency = 1
+    content.Parent = frame
+
+    local cLayout = Instance.new("UIListLayout")
+    cLayout.Parent = content
+    cLayout.Padding = UDim.new(0,4)
+
+    ToggleSwitch(content,"Auto Demonite Event",QuestCfg.AutoDemoniteEvent,function(v)
+        QuestCfg.AutoDemoniteEvent = v
+    end)
+
+    ToggleSwitch(content,"Auto Slime Event",QuestCfg.AutoSlimeEvent,function(v)
+        QuestCfg.AutoSlimeEvent = v
+    end)
+
+    ToggleSwitch(content,"Auto Dungeon Discovery",QuestCfg.AutoDungeonDiscovery,function(v)
+        QuestCfg.AutoDungeonDiscovery = v
+    end)
+end
+
+BuildAutoQuestPanel(AutoQuestPanel)
+
+--------------------------------------------------
+-- STATS PANEL
+--------------------------------------------------
+local StatsPanel = Instance.new("Frame")
+StatsPanel.Size = UDim2.new(1, 0, 1, 0)
+StatsPanel.BackgroundColor3 = PANEL_COLOR
+StatsPanel.BorderSizePixel = 0
+StatsPanel.Parent = RightPanel
+round(StatsPanel,4)
+StatsPanel.Visible = false
+Panels["Stats"] = StatsPanel
+
+local function BuildStatsPanel(parent)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 1, -20)
+    container.Position = UDim2.new(0, 10, 0, 10)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = container
+    layout.Padding = UDim.new(0,8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    local autoFrame = Instance.new("Frame")
+    autoFrame.Size = UDim2.new(0.7, 0, 0, 230)
+    autoFrame.BackgroundColor3 = PANEL_DARK
+    autoFrame.BorderSizePixel = 0
+    autoFrame.Parent = container
+    round(autoFrame,4)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -12, 0, 20)
+    title.Position = UDim2.new(0,6,0,4)
+    title.BackgroundTransparency = 1
+    title.Font = BOLD_FONT
+    title.TextSize = 14
+    title.TextColor3 = TEXT_MAIN
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = "> AUTO STATS"
+    title.Parent = autoFrame
+
+    local content = Instance.new("Frame")
+    content.Size = UDim2.new(1, -12, 1, -26)
+    content.Position = UDim2.new(0,6,0,24)
+    content.BackgroundTransparency = 1
+    content.Parent = autoFrame
+
+    local cLayout = Instance.new("UIListLayout")
+    cLayout.Parent = content
+    cLayout.Padding = UDim.new(0,4)
+
+    ToggleSwitch(content,"Enable Auto Stats",StatsCfg.EnableAutoStats,function(v)
+        StatsCfg.EnableAutoStats = v
+    end)
+
+    DropdownSimple(content,"Select Stat",{"Melee","Defence","Sword","Power"},1,function(opt)
+        StatsCfg.SelectedStat = opt
+    end)
+
+    SliderBar(content,"Points Per Allocation",1,10,StatsCfg.PointsPerAllocation,function(v)
+        StatsCfg.PointsPerAllocation = math.floor(v + 0.5)
+    end)
+
+    SliderBar(content,"Interval (seconds)",0.1,5,StatsCfg.Interval,function(v)
+        StatsCfg.Interval = v
+    end)
+
+    local resetButton = Instance.new("TextButton")
+    resetButton.Size = UDim2.new(1, 0, 0, 30)
+    resetButton.BackgroundColor3 = Color3.fromRGB(40,0,0)
+    resetButton.BorderSizePixel = 0
+    resetButton.AutoButtonColor = true
+    resetButton.Font = REGULAR_FONT
+    resetButton.TextSize = 14
+    resetButton.TextColor3 = Color3.fromRGB(255,80,80)
+    resetButton.Text = "RESET ALL STATS"
+    resetButton.Parent = content
+    round(resetButton,4)
+
+    resetButton.MouseButton1Click:Connect(function()
+        -- твой Reset stats remote сюда
+    end)
+end
+
+BuildStatsPanel(StatsPanel)
+
+task.spawn(function()
+    while true do
+        if StatsCfg.EnableAutoStats then
+            -- авто-распределение статов
+            -- SelectedStat, PointsPerAllocation
+        end
+        task.wait(StatsCfg.Interval)
+    end
+end)
+
+--------------------------------------------------
+-- TELEPORT PANEL
+--------------------------------------------------
+local TeleportPanel = Instance.new("Frame")
+TeleportPanel.Size = UDim2.new(1, 0, 1, 0)
+TeleportPanel.BackgroundColor3 = PANEL_COLOR
+TeleportPanel.BorderSizePixel = 0
+TeleportPanel.Parent = RightPanel
+round(TeleportPanel,4)
+TeleportPanel.Visible = false
+Panels["Teleport"] = TeleportPanel
+
+local function BuildTeleportPanel(parent)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 1, -20)
+    container.Position = UDim2.new(0, 10, 0, 10)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+
+    local grid = Instance.new("UIGridLayout")
+    grid.Parent = container
+    grid.CellPadding = UDim2.new(0, 10, 0, 10)
+    grid.CellSize = UDim2.new(0.5, -10, 0.5, -10)
+    grid.FillDirectionMaxCells = 2
+    grid.FillDirection = Enum.FillDirection.Horizontal
+    grid.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local function simpleButton(parent, text, callback)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 28)
+        btn.BackgroundColor3 = Color3.fromRGB(0, 30, 0)
+        btn.BorderSizePixel = 0
+        btn.Font = REGULAR_FONT
+        btn.TextSize = 13
+        btn.TextColor3 = TEXT_MAIN
+        btn.Text = text
+        btn.AutoButtonColor = true
+        btn.Parent = parent
+        round(btn, 3)
+        btn.MouseButton1Click:Connect(function()
+            if callback then pcall(callback) end
+        end)
+        return btn
+    end
+
+    -- Teleport
+    local tpFrame = Instance.new("Frame")
+    tpFrame.BackgroundColor3 = PANEL_DARK
+    tpFrame.BorderSizePixel = 0
+    tpFrame.Parent = container
+    round(tpFrame,4)
+
+    local tpTitle = Instance.new("TextLabel")
+    tpTitle.Size = UDim2.new(1, -12, 0, 20)
+    tpTitle.Position = UDim2.new(0,6,0,4)
+    tpTitle.BackgroundTransparency = 1
+    tpTitle.Font = BOLD_FONT
+    tpTitle.TextSize = 14
+    tpTitle.TextColor3 = TEXT_MAIN
+    tpTitle.TextXAlignment = Enum.TextXAlignment.Left
+    tpTitle.Text = "> TELEPORT"
+    tpTitle.Parent = tpFrame
+
+    local tpContent = Instance.new("Frame")
+    tpContent.Size = UDim2.new(1, -12, 1, -26)
+    tpContent.Position = UDim2.new(0,6,0,24)
+    tpContent.BackgroundTransparency = 1
+    tpContent.Parent = tpFrame
+
+    local tpLayout = Instance.new("UIListLayout")
+    tpLayout.Parent = tpContent
+    tpLayout.Padding = UDim.new(0,4)
+
+    simpleButton(tpContent,"Save Current Position",function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            TeleportCfg.SavedPosition = hrp.CFrame
+        end
+    end)
+
+    simpleButton(tpContent,"Teleport to Saved Position",function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp and TeleportCfg.SavedPosition then
+            hrp.CFrame = TeleportCfg.SavedPosition
+        end
+    end)
+
+    simpleButton(tpContent,"Teleport to Random NPC",function()
+        -- своя реализация
+    end)
+
+    -- Teleport Island
+    local islandFrame = Instance.new("Frame")
+    islandFrame.BackgroundColor3 = PANEL_DARK
+    islandFrame.BorderSizePixel = 0
+    islandFrame.Parent = container
+    round(islandFrame,4)
+
+    local islandTitle = tpTitle:Clone()
+    islandTitle.Text = "> TELEPORT ISLAND"
+    islandTitle.Parent = islandFrame
+
+    local islandContent = Instance.new("Frame")
+    islandContent.Size = UDim2.new(1, -12, 1, -26)
+    islandContent.Position = UDim2.new(0,6,0,24)
+    islandContent.BackgroundTransparency = 1
+    islandContent.Parent = islandFrame
+
+    local islandLayout = Instance.new("UIListLayout")
+    islandLayout.Parent = islandContent
+    islandLayout.Padding = UDim.new(0,4)
+
+    local islandList = {
+        "StarterIsland","SailorIsland","JungleIsland","DesertIsland",
+        "DungeonIsland","SnowIsland","BossIsland","ShibuyaStation",
+        "HuecoMundo","ShinjukuIsland","SlimeIsland","AcademyIsland",
+        "JudgmentIsland","SoulSociety"
+    }
+    local currentIsland = islandList[1]
+
+    DropdownSimple(islandContent,"Select Island",islandList,1,function(opt)
+        currentIsland = opt
+    end)
+
+    simpleButton(islandContent,"Teleport to Island",function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local islandFolder = workspace:FindFirstChild("Islands") or workspace
+        local target = islandFolder:FindFirstChild(currentIsland)
+        if target and target:IsA("BasePart") then
+            hrp.CFrame = target.CFrame + Vector3.new(0,5,0)
+        end
+    end)
+
+    -- Shop Teleport
+    local shopFrame = Instance.new("Frame")
+    shopFrame.BackgroundColor3 = PANEL_DARK
+    shopFrame.BorderSizePixel = 0
+    shopFrame.Parent = container
+    round(shopFrame,4)
+
+    local shopTitle = tpTitle:Clone()
+    shopTitle.Text = "> SHOP TELEPORT"
+    shopTitle.Parent = shopFrame
+
+    local shopContent = Instance.new("Frame")
+    shopContent.Size = UDim2.new(1, -12, 1, -26)
+    shopContent.Position = UDim2.new(0,6,0,24)
+    shopContent.BackgroundTransparency = 1
+    shopContent.Parent = shopFrame
+
+    local shopLayout = Instance.new("UIListLayout")
+    shopLayout.Parent = shopContent
+    shopLayout.Padding = UDim.new(0,4)
+
+    local currentCategory = "Buyers"
+    local currentShopNpc = nil
+    local shopNpcList = {}
+
+    DropdownSimple(shopContent,"Category",{"Buyers","Shop","Summon"},1,function(opt)
+        currentCategory = opt
+    end)
+
+    local npcDropdownFrame
+    local function rebuildNpcDropdown()
+        if npcDropdownFrame then npcDropdownFrame:Destroy() end
+        if #shopNpcList == 0 then
+            npcDropdownFrame = DropdownSimple(shopContent,"Select NPC",{"---"},1,function() end)
+        else
+            npcDropdownFrame = DropdownSimple(shopContent,"Select NPC",shopNpcList,1,function(opt)
+                currentShopNpc = opt
+            end)
+        end
+    end
+
+    rebuildNpcDropdown()
+
+    simpleButton(shopContent,"Refresh Shop NPCs",function()
+        shopNpcList = {}
+        -- собрать NPC по currentCategory
+        rebuildNpcDropdown()
+    end)
+
+    simpleButton(shopContent,"Teleport to NPC",function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp or not currentShopNpc then return end
+        -- найти нужного NPC
+    end)
+
+    -- Quick Teleport
+    local quickFrame = Instance.new("Frame")
+    quickFrame.BackgroundColor3 = PANEL_DARK
+    quickFrame.BorderSizePixel = 0
+    quickFrame.Parent = container
+    round(quickFrame,4)
+
+    local quickTitle = tpTitle:Clone()
+    quickTitle.Text = "> QUICK TELEPORT"
+    quickTitle.Parent = quickFrame
+
+    local quickContent = Instance.new("Frame")
+    quickContent.Size = UDim2.new(1, -12, 1, -26)
+    quickContent.Position = UDim2.new(0,6,0,24)
+    quickContent.BackgroundTransparency = 1
+    quickContent.Parent = quickFrame
+
+    local quickLayout = Instance.new("UIListLayout")
+    quickLayout.Parent = quickContent
+    quickLayout.Padding = UDim.new(0,4)
+
+    simpleButton(quickContent,"Teleport to Spawn",function()
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        local spawn = workspace:FindFirstChild("StarterIsland")
+        if spawn and spawn:IsA("BasePart") then
+            hrp.CFrame = spawn.CFrame + Vector3.new(0,5,0)
+        end
+    end)
+end
+
+BuildTeleportPanel(TeleportPanel)
+
+--------------------------------------------------
+-- SETTINGS PANEL
+--------------------------------------------------
+local SettingsPanel = Instance.new("Frame")
+SettingsPanel.Size = UDim2.new(1, 0, 1, 0)
+SettingsPanel.BackgroundColor3 = PANEL_COLOR
+SettingsPanel.BorderSizePixel = 0
+SettingsPanel.Parent = RightPanel
+round(SettingsPanel,4)
+SettingsPanel.Visible = false
+Panels["Settings"] = SettingsPanel
+
+local function BuildSettingsPanel(parent)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -20, 1, -20)
+    container.Position = UDim2.new(0, 10, 0, 10)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+
+    local leftColumn = Instance.new("Frame")
+    leftColumn.Size = UDim2.new(0.5, -5, 1, 0)
+    leftColumn.BackgroundTransparency = 1
+    leftColumn.Parent = container
+
+    local leftLayout = Instance.new("UIListLayout")
+    leftLayout.Parent = leftColumn
+    leftLayout.Padding = UDim.new(0,8)
+    leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local rightColumn = Instance.new("Frame")
+    rightColumn.Size = UDim2.new(0.5, -5, 1, 0)
+    rightColumn.Position = UDim2.new(0.5, 5, 0, 0)
+    rightColumn.BackgroundTransparency = 1
+    rightColumn.Parent = container
+
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.Parent = rightColumn
+    rightLayout.Padding = UDim.new(0,8)
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    -- Menu
+    local menuFrame = Instance.new("Frame")
+    menuFrame.Size = UDim2.new(1, 0, 0, 120)
+    menuFrame.BackgroundColor3 = PANEL_DARK
+    menuFrame.BorderSizePixel = 0
+    menuFrame.Parent = leftColumn
+    round(menuFrame,4)
+
+    local menuTitle = Instance.new("TextLabel")
+    menuTitle.Size = UDim2.new(1, -12, 0, 20)
+    menuTitle.Position = UDim2.new(0,6,0,4)
+    menuTitle.BackgroundTransparency = 1
+    menuTitle.Font = BOLD_FONT
+    menuTitle.TextSize = 14
+    menuTitle.TextColor3 = TEXT_MAIN
+    menuTitle.TextXAlignment = Enum.TextXAlignment.Left
+    menuTitle.Text = "> MENU"
+    menuTitle.Parent = menuFrame
+
+    local menuContent = Instance.new("Frame")
+    menuContent.Size = UDim2.new(1, -12, 1, -26)
+    menuContent.Position = UDim2.new(0,6,0,24)
+    menuContent.BackgroundTransparency = 1
+    menuContent.Parent = menuFrame
+
+    local menuLayout = Instance.new("UIListLayout")
+    menuLayout.Parent = menuContent
+    menuLayout.Padding = UDim.new(0,4)
+
+    -- Menu bind
+    local bindFrame = Instance.new("Frame")
+    bindFrame.Size = UDim2.new(1, 0, 0, 24)
+    bindFrame.BackgroundTransparency = 1
+    bindFrame.Parent = menuContent
+
+    local bindLabel = Instance.new("TextLabel")
+    bindLabel.Size = UDim2.new(0.5, -5, 1, 0)
+    bindLabel.BackgroundTransparency = 1
+    bindLabel.Font = REGULAR_FONT
+    bindLabel.TextSize = 13
+    bindLabel.TextColor3 = TEXT_MAIN
+    bindLabel.TextXAlignment = Enum.TextXAlignment.Left
+    bindLabel.Text = "Menu bind"
+    bindLabel.Parent = bindFrame
+
+    local bindButton = Instance.new("TextButton")
+    bindButton.Size = UDim2.new(0.5, 0, 1, 0)
+    bindButton.Position = UDim2.new(0.5, 0, 0, 0)
+    bindButton.BackgroundColor3 = Color3.fromRGB(0,30,0)
+    bindButton.BorderSizePixel = 0
+    bindButton.Font = REGULAR_FONT
+    bindButton.TextSize = 13
+    bindButton.TextColor3 = TEXT_SUB
+    bindButton.Text = SettingsCfg.MenuKey.Name or "G"
+    bindButton.Parent = bindFrame
+    round(bindButton,3)
+
+    local waitingForKey = false
+    bindButton.MouseButton1Click:Connect(function()
+        if waitingForKey then return end
+        waitingForKey = true
+        bindButton.Text = "[press key]"
+        local conn
+        conn = UserInputService.InputBegan:Connect(function(input, gp)
+            if gp then return end
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                SettingsCfg.MenuKey = input.KeyCode
+                bindButton.Text = SettingsCfg.MenuKey.Name
+                waitingForKey = false
+                if conn then conn:Disconnect() end
+            end
+        end)
+    end)
+
+    local unloadBtn = Instance.new("TextButton")
+    unloadBtn.Size = UDim2.new(1, 0, 0, 26)
+    unloadBtn.BackgroundColor3 = Color3.fromRGB(40,0,0)
+    unloadBtn.BorderSizePixel = 0
+    unloadBtn.Font = REGULAR_FONT
+    unloadBtn.TextSize = 13
+    unloadBtn.TextColor3 = Color3.fromRGB(255,80,80)
+    unloadBtn.Text = "UNLOAD SCRIPT"
+    unloadBtn.Parent = menuContent
+    round(unloadBtn,4)
+
+    unloadBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+
+    -- Github
+    local ghFrame = Instance.new("Frame")
+    ghFrame.Size = UDim2.new(1, 0, 0, 90)
+    ghFrame.BackgroundColor3 = PANEL_DARK
+    ghFrame.BorderSizePixel = 0
+    ghFrame.Parent = leftColumn
+    round(ghFrame,4)
+
+    local ghTitle = menuTitle:Clone()
+    ghTitle.Text = "> GITHUB"
+    ghTitle.Parent = ghFrame
+
+    local ghText = Instance.new("TextLabel")
+    ghText.Size = UDim2.new(1, -12, 1, -26)
+    ghText.Position = UDim2.new(0,6,0,24)
+    ghText.BackgroundTransparency = 1
+    ghText.Font = REGULAR_FONT
+    ghText.TextSize = 13
+    ghText.TextColor3 = TEXT_MAIN
+    ghText.TextXAlignment = Enum.TextXAlignment.Left
+    ghText.TextYAlignment = Enum.TextYAlignment.Top
+    ghText.TextWrapped = true
+    ghText.Text = "Thanks for using Aisberg Hub!\nAn open source code!"
+    ghText.Parent = ghFrame
+
+    -- Configuration
+    local cfgFrame = Instance.new("Frame")
+    cfgFrame.Size = UDim2.new(1, 0, 0, 260)
+    cfgFrame.BackgroundColor3 = PANEL_DARK
+    cfgFrame.BorderSizePixel = 0
+    cfgFrame.Parent = rightColumn
+    round(cfgFrame,4)
+
+    local cfgTitle = menuTitle:Clone()
+    cfgTitle.Text = "> CONFIGURATION"
+    cfgTitle.Parent = cfgFrame
+
+    local cfgContent = Instance.new("Frame")
+    cfgContent.Size = UDim2.new(1, -12, 1, -26)
+    cfgContent.Position = UDim2.new(0,6,0,24)
+    cfgContent.BackgroundTransparency = 1
+    cfgContent.Parent = cfgFrame
+
+    local cfgLayout = Instance.new("UIListLayout")
+    cfgLayout.Parent = cfgContent
+    cfgLayout.Padding = UDim.new(0,4)
+
+    -- config name
+    local nameFrame = Instance.new("Frame")
+    nameFrame.Size = UDim2.new(1, 0, 0, 24)
+    nameFrame.BackgroundTransparency = 1
+    nameFrame.Parent = cfgContent
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0.4, -5, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Font = REGULAR_FONT
+    nameLabel.TextSize = 13
+    nameLabel.TextColor3 = TEXT_MAIN
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Text = "Config name"
+    nameLabel.Parent = nameFrame
+
+    local nameBox = Instance.new("TextBox")
+    nameBox.Size = UDim2.new(0.6, 0, 1, 0)
+    nameBox.Position = UDim2.new(0.4, 0, 0, 0)
+    nameBox.BackgroundColor3 = Color3.fromRGB(0,30,0)
+    nameBox.BorderSizePixel = 0
+    nameBox.Font = REGULAR_FONT
+    nameBox.TextSize = 13
+    nameBox.TextColor3 = TEXT_MAIN
+    nameBox.PlaceholderText = "enter config name"
+    nameBox.Text = ""
+    nameBox.Parent = nameFrame
+    round(nameBox,3)
+
+    local Configs = {}
+    local CurrentConfig = nil
+
+    local listFrame = Instance.new("Frame")
+    listFrame.Size = UDim2.new(1, 0, 0, 80)
+    listFrame.BackgroundColor3 = Color3.fromRGB(0,15,0)
+    listFrame.BorderSizePixel = 0
+    listFrame.Parent = cfgContent
+    round(listFrame,3)
+
+    local listLabel = Instance.new("TextLabel")
+    listLabel.Size = UDim2.new(1, -8, 0, 18)
+    listLabel.Position = UDim2.new(0,4,0,2)
+    listLabel.BackgroundTransparency = 1
+    listLabel.Font = REGULAR_FONT
+    listLabel.TextSize = 13
+    listLabel.TextColor3 = TEXT_MAIN
+    listLabel.TextXAlignment = Enum.TextXAlignment.Left
+    listLabel.Text = "Config list:"
+    listLabel.Parent = listFrame
+
+    local listScroll = Instance.new("ScrollingFrame")
+    listScroll.Size = UDim2.new(1, -8, 1, -22)
+    listScroll.Position = UDim2.new(0,4,0,20)
+    listScroll.BackgroundTransparency = 1
+    listScroll.ScrollBarThickness = 3
+    listScroll.CanvasSize = UDim2.new(0,0,0,0)
+    listScroll.Parent = listFrame
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Parent = listScroll
+    listLayout.Padding = UDim.new(0,2)
+
+    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        listScroll.CanvasSize = UDim2.new(0,0,0,listLayout.AbsoluteContentSize.Y)
+    end)
+
+    local function rebuildConfigList()
+        for _, child in ipairs(listScroll:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        if next(Configs) == nil then
+            local empty = Instance.new("TextButton")
+            empty.Size = UDim2.new(1, 0, 0, 18)
+            empty.BackgroundColor3 = Color3.fromRGB(0,20,0)
+            empty.BorderSizePixel = 0
+            empty.Font = REGULAR_FONT
+            empty.TextSize = 12
+            empty.TextColor3 = TEXT_SUB
+            empty.Text = "---"
+            empty.AutoButtonColor = false
+            empty.Parent = listScroll
+            round(empty,2)
+            return
+        end
+        for name,_ in pairs(Configs) do
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 18)
+            btn.BackgroundColor3 = Color3.fromRGB(0,20,0)
+            btn.BorderSizePixel = 0
+            btn.Font = REGULAR_FONT
+            btn.TextSize = 12
+            btn.TextColor3 = TEXT_MAIN
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.Text = name
+            btn.Parent = listScroll
+            round(btn,2)
+            btn.MouseButton1Click:Connect(function()
+                nameBox.Text = name
+            end)
+        end
+    end
+
+    rebuildConfigList()
+
+    local function smallButton(text)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(1, 0, 0, 22)
+        b.BackgroundColor3 = Color3.fromRGB(0,30,0)
+        b.BorderSizePixel = 0
+        b.Font = REGULAR_FONT
+        b.TextSize = 13
+        b.TextColor3 = TEXT_MAIN
+        b.Text = text
+        b.AutoButtonColor = true
+        round(b,3)
+        b.Parent = cfgContent
+        return b
+    end
+
+    local createBtn    = smallButton("Create config")
+    local loadBtn      = smallButton("Load config")
+    local overwriteBtn = smallButton("Overwrite config")
+    local deleteBtn    = smallButton("Delete config")
+    local refreshBtn   = smallButton("Refresh list")
+    local setAutoBtn   = smallButton("Set as autoload")
+    local resetAutoBtn = smallButton("Reset autoload")
+
+    local autoLabel = Instance.new("TextLabel")
+    autoLabel.Size = UDim2.new(1, 0, 0, 18)
+    autoLabel.BackgroundTransparency = 1
+    autoLabel.Font = REGULAR_FONT
+    autoLabel.TextSize = 13
+    autoLabel.TextColor3 = TEXT_SUB
+    autoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    autoLabel.Text = "Current autoload config: none"
+    autoLabel.Parent = cfgContent
+
+    local function getCurrentName()
+        local n = nameBox.Text
+        if n == nil or n == "" then return nil end
+        return n
+    end
+
+    local function captureCurrentConfig()
+        return {
+            MainConfig      = MainCfg,
+            CombatConfig    = CombatCfg,
+            FarmConfig      = FarmCfg,
+            QuestConfig     = QuestCfg,
+            StatsConfig     = StatsCfg,
+            TeleportConfig  = TeleportCfg,
+            SettingsConfig  = SettingsCfg,
+        }
+    end
+
+    local function applyConfigData(data)
+        if not data then return end
+        _G.MainConfig      = data.MainConfig or _G.MainConfig
+        _G.CombatConfig    = data.CombatConfig or _G.CombatConfig
+        _G.FarmConfig      = data.FarmConfig or _G.FarmConfig
+        _G.QuestConfig     = data.QuestConfig or _G.QuestConfig
+        _G.StatsConfig     = data.StatsConfig or _G.StatsConfig
+        _G.TeleportConfig  = data.TeleportConfig or _G.TeleportConfig
+        _G.SettingsConfig  = data.SettingsConfig or _G.SettingsConfig
+    end
+
+    createBtn.MouseButton1Click:Connect(function()
+        local name = getCurrentName()
+        if not name then return end
+        Configs[name] = captureCurrentConfig()
+        CurrentConfig = name
+        rebuildConfigList()
+    end)
+
+    loadBtn.MouseButton1Click:Connect(function()
+        local name = getCurrentName()
+        if not name then return end
+        applyConfigData(Configs[name])
+    end)
+
+    overwriteBtn.MouseButton1Click:Connect(function()
+        local name = getCurrentName()
+        if not name then return end
+        if not Configs[name] then return end
+        Configs[name] = captureCurrentConfig()
+    end)
+
+    deleteBtn.MouseButton1Click:Connect(function()
+        local name = getCurrentName()
+        if not name then return end
+        Configs[name] = nil
+        if SettingsCfg.AutoLoadConfigName == name then
+            SettingsCfg.AutoLoadConfigName = nil
+            autoLabel.Text = "Current autoload config: none"
+        end
+        if CurrentConfig == name then
+            CurrentConfig = nil
+        end
+        rebuildConfigList()
+    end)
+
+    refreshBtn.MouseButton1Click:Connect(function()
+        rebuildConfigList()
+    end)
+
+    setAutoBtn.MouseButton1Click:Connect(function()
+        local name = getCurrentName()
+        if not name then return end
+        if not Configs[name] then return end
+        SettingsCfg.AutoLoadConfigName = name
+        autoLabel.Text = "Current autoload config: "..name
+    end)
+
+    resetAutoBtn.MouseButton1Click:Connect(function()
+        SettingsCfg.AutoLoadConfigName = nil
+        autoLabel.Text = "Current autoload config: none"
+    end)
+end
+
+BuildSettingsPanel(SettingsPanel)
+
+--------------------------------------------------
+-- SECTION BUTTONS & START
+--------------------------------------------------
+sectionButtons["Main"]       = createSideButton("> MAIN")
+sectionButtons["Combat"]     = createSideButton("> COMBAT")
+sectionButtons["Farm"]       = createSideButton("> FARM")
+sectionButtons["Auto Quest"] = createSideButton("> AUTO QUEST")
+sectionButtons["Stats"]      = createSideButton("> STATS")
+sectionButtons["Teleport"]   = createSideButton("> TELEPORT")
+sectionButtons["Settings"]   = createSideButton("> SETTINGS")
+
+for name, btn in pairs(sectionButtons) do
+    btn.MouseButton1Click:Connect(function()
+        setSection(name)
+    end)
+end
+
+setSection("Main")
