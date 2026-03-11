@@ -1,5 +1,5 @@
 --// SERVICES
-local Players = game:GetService("Players)
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -15,6 +15,13 @@ local TEXT_SUB     = Color3.fromRGB(0, 180, 0)
 
 local REGULAR_FONT = Enum.Font.Code
 local BOLD_FONT    = Enum.Font.Code
+
+-- SettingsConfig (bind + автозагрузка)
+_G.SettingsConfig = _G.SettingsConfig or {
+    MenuKey = Enum.KeyCode.G,
+    AutoLoadConfigName = nil,
+}
+local SettingsCfg = _G.SettingsConfig
 
 --// HELPERS
 local function round(obj, radius)
@@ -89,7 +96,7 @@ local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 26, 0, 26)
 MinimizeBtn.Position = UDim2.new(1, -64, 0, 3)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(0, 40, 0)
-MinimizeBtn.Text = "_"
+MinimizeBtn.Text = "—"
 MinimizeBtn.Font = BOLD_FONT
 MinimizeBtn.TextSize = 18
 MinimizeBtn.TextColor3 = ACCENT_COLOR
@@ -103,7 +110,7 @@ ContentHolder.Position = UDim2.new(0, 10, 0, 42)
 ContentHolder.BackgroundTransparency = 1
 ContentHolder.Parent = MainFrame
 
--- кастомный drag + флаг для слайдера
+-- кастомный drag
 local draggingMain = false
 local dragStart, startPos
 local IsDraggingSlider = false
@@ -182,19 +189,13 @@ TitleBar.InputEnded:Connect(function(input)
     end
 end)
 
--- SettingsConfig для bind
-_G.SettingsConfig = _G.SettingsConfig or {
-    MenuKey = Enum.KeyCode.G,
-    AutoLoadConfigName = nil,
-}
-local SettingsCfg = _G.SettingsConfig
-
--- G / MenuKey toggle
+-- показ / скрытие всего меню
 local menuVisible = true
 local function setMenuVisible(state)
     menuVisible = state
-    ScreenGui.Enabled = state
+    ScreenGui.Enabled = state      -- ВСЁ меню, включая sidebar
 end
+
 setMenuVisible(true)
 
 UserInputService.InputBegan:Connect(function(input, gp)
@@ -263,10 +264,10 @@ local function createSideButton(text)
 end
 
 --------------------------------------------------
--- RIGHT MAIN PANEL (центр)
+-- CENTRAL RIGHT PANEL
 --------------------------------------------------
 local RightPanel = Instance.new("Frame")
-RightPanel.Size = UDim2.new(1, -170 - 230, 1, 0) -- минус левый и правый сайдбар
+RightPanel.Size = UDim2.new(1, -170 - 230, 1, 0)
 RightPanel.Position = UDim2.new(0, 170, 0, 0)
 RightPanel.BackgroundTransparency = 1
 RightPanel.Parent = ContentHolder
@@ -568,17 +569,17 @@ local TeleportCfg = _G.TeleportConfig
 -- RIGHT SIDEBAR (PROFILE + STATS)
 --------------------------------------------------
 local RightSidebar = Instance.new("Frame")
-RightSidebar.Size = UDim2.new(0, 230, 1, -36)
-RightSidebar.Position = UDim2.new(1, -240, 0, 30)
+RightSidebar.Size = UDim2.new(0, 200, 1, -245)
+RightSidebar.Position = UDim2.new(1, -210, 0, 1)
 RightSidebar.BackgroundColor3 = PANEL_COLOR
-RightSidebar.BackgroundTransparency = 0.05
+RightSidebar.BackgroundTransparency = 0
 RightSidebar.BorderSizePixel = 0
-RightSidebar.Parent = MainFrame
+RightSidebar.Parent = ContentHolder 
 round(RightSidebar, 4)
 addStroke(RightSidebar, 1, Color3.fromRGB(0, 60, 0), 0.3)
 
 local ProfileFrame = Instance.new("Frame")
-ProfileFrame.Size = UDim2.new(1, -20, 0, 70)
+ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
 ProfileFrame.Position = UDim2.new(0, 10, 0, 10)
 ProfileFrame.BackgroundColor3 = PANEL_DARK
 ProfileFrame.BackgroundTransparency = 0.1
@@ -587,27 +588,26 @@ ProfileFrame.Parent = RightSidebar
 round(ProfileFrame, 4)
 
 local Avatar = Instance.new("ImageLabel")
-Avatar.Size = UDim2.new(0, 40, 0, 40)
-Avatar.Position = UDim2.new(0, 8, 0.5, -20)
+Avatar.Size = UDim2.new(0, 50, 0, 50)
+Avatar.Position = UDim2.new(0, 1, 0.3, -20)
 Avatar.BackgroundTransparency = 1
 Avatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=150&h=150"
 Avatar.Parent = ProfileFrame
 
 local NameLabel = Instance.new("TextLabel")
 NameLabel.Size = UDim2.new(1, -60, 0, 18)
-NameLabel.Position = UDim2.new(0, 56, 0, 8)
+NameLabel.Position = UDim2.new(0, 55, 0, 8)
 NameLabel.BackgroundTransparency = 1
 NameLabel.Font = REGULAR_FONT
-NameLabel.TextSize = 13
+NameLabel.TextSize = 18
 NameLabel.TextColor3 = TEXT_MAIN
 NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-NameLabel.Text = "@ ".. LocalPlayer.Name
+NameLabel.Text = "@".. LocalPlayer.Name
 NameLabel.Parent = ProfileFrame
 
--- STATS under profile
 local StatsFrame = Instance.new("Frame")
 StatsFrame.Size = UDim2.new(1, -20, 0, 90)
-StatsFrame.Position = UDim2.new(0, 10, 0, 90)
+StatsFrame.Position = UDim2.new(0, 20, 0, 75)
 StatsFrame.BackgroundColor3 = PANEL_DARK
 StatsFrame.BackgroundTransparency = 0.1
 StatsFrame.BorderSizePixel = 0
@@ -651,7 +651,13 @@ task.spawn(function()
         framesCounter = 0
         fpsLabel.Text = ("FPS: %d"):format(fps)
 
-        local pingMs = 0   -- свою реализацию ping сюда
+        local pingMs = 0
+        pcall(function()
+            local p = LocalPlayer
+            if p then
+                pingMs = math.floor(p:GetNetworkPing() * 2000)
+            end
+        end)
         pingLabel.Text = ("Ping: %d ms"):format(pingMs)
 
         local level = 0
@@ -677,7 +683,7 @@ task.spawn(function()
 end)
 
 --------------------------------------------------
--- MAIN PANEL (заглушка)
+-- MAIN PANEL
 --------------------------------------------------
 local MainPanel = Instance.new("Frame")
 MainPanel.Size = UDim2.new(1, 0, 1, 0)
@@ -912,7 +918,6 @@ local function BuildFarmPanel(parent)
         container.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
     end)
 
-    -- Auto Farm
     local afFrame = Instance.new("Frame")
     afFrame.Size = UDim2.new(1, 0, 0, 220)
     afFrame.BackgroundColor3 = PANEL_DARK
@@ -974,7 +979,6 @@ local function BuildFarmPanel(parent)
         FarmCfg.HoverHeight = v
     end)
 
-    -- Auto Summon Boss
     local bossFrame = Instance.new("Frame")
     bossFrame.Size = UDim2.new(1, 0, 0, 200)
     bossFrame.BackgroundColor3 = PANEL_DARK
@@ -1172,7 +1176,7 @@ local function BuildStatsPanel(parent)
     round(resetButton,4)
 
     resetButton.MouseButton1Click:Connect(function()
-        -- твой Reset stats remote сюда
+        -- твой Reset stats remote
     end)
 end
 
@@ -1182,7 +1186,7 @@ task.spawn(function()
     while true do
         if StatsCfg.EnableAutoStats then
             -- авто-распределение статов
-            -- SelectedStat, PointsPerAllocation
+            -- StatsCfg.SelectedStat, StatsCfg.PointsPerAllocation
         end
         task.wait(StatsCfg.Interval)
     end
@@ -1278,7 +1282,7 @@ local function BuildTeleportPanel(parent)
     end)
 
     simpleButton(tpContent,"Teleport to Random NPC",function()
-        -- своя реализация
+        -- самостоятельно реализуешь поиск NPC
     end)
 
     -- Teleport Island
@@ -1378,7 +1382,7 @@ local function BuildTeleportPanel(parent)
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if not hrp or not currentShopNpc then return end
-        -- найти нужного NPC
+        -- найти и телепорт к npc
     end)
 
     -- Quick Teleport
@@ -1484,7 +1488,6 @@ local function BuildSettingsPanel(parent)
     menuLayout.Parent = menuContent
     menuLayout.Padding = UDim.new(0,4)
 
-    -- Menu bind
     local bindFrame = Instance.new("Frame")
     bindFrame.Size = UDim2.new(1, 0, 0, 24)
     bindFrame.BackgroundTransparency = 1
@@ -1591,7 +1594,6 @@ local function BuildSettingsPanel(parent)
     cfgLayout.Parent = cfgContent
     cfgLayout.Padding = UDim.new(0,4)
 
-    -- config name
     local nameFrame = Instance.new("Frame")
     nameFrame.Size = UDim2.new(1, 0, 0, 24)
     nameFrame.BackgroundTransparency = 1
@@ -1813,7 +1815,7 @@ end
 BuildSettingsPanel(SettingsPanel)
 
 --------------------------------------------------
--- SECTION BUTTONS & START
+-- SECTION BUTTONS
 --------------------------------------------------
 sectionButtons["Main"]       = createSideButton("> MAIN")
 sectionButtons["Combat"]     = createSideButton("> COMBAT")
