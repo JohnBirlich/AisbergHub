@@ -1,4 +1,4 @@
--- 🌊 Sailor Piece | Aisberg-style Hub v1 (Xeno/Wave/Solara)
+-- 🌊 Sailor Piece | Aisberg-style Hub v1 (Xeno/Wave/Solara-safe)
 
 if getgenv and getgenv().SailorPieceHubLoaded then return end
 if getgenv then getgenv().SailorPieceHubLoaded = true end
@@ -7,11 +7,12 @@ local Players      = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UIS          = game:GetService("UserInputService")
 local RunService   = game:GetService("RunService")
+local RS           = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
 --------------------------------------------------
--- Welcome баннер (Aisberg стиль)
+-- Welcome баннер
 --------------------------------------------------
 
 local function showWelcomeAndThen(callback)
@@ -86,7 +87,7 @@ local function showWelcomeAndThen(callback)
 end
 
 --------------------------------------------------
--- Основной GUI (после welcome)
+-- Основной GUI
 --------------------------------------------------
 
 local function createMainGui()
@@ -105,7 +106,7 @@ local function createMainGui()
     end)
 
     --------------------------------------------------
-    -- GUI каркас (как в Midnight Chasers)
+    -- GUI каркас
     --------------------------------------------------
 
     local screenGui = Instance.new("ScreenGui")
@@ -151,7 +152,7 @@ local function createMainGui()
     end)
 
     --------------------------------------------------
-    -- Тоггл GUI на G
+    -- Toggle G
     --------------------------------------------------
 
     UIS.InputBegan:Connect(function(input, gpe)
@@ -221,24 +222,33 @@ local function createMainGui()
     end
 
     --------------------------------------------------
-    -- Данные для TP
+    -- Remotes
+    --------------------------------------------------
+
+    local Remotes       = RS:WaitForChild("Remotes")
+    local RemoteEvents  = RS:WaitForChild("RemoteEvents")
+    local TeleportUI    = Remotes:WaitForChild("OpenTeleportUI")
+    local SafeZoneEvent = RemoteEvents:WaitForChild("SafeZoneEvent")
+
+    --------------------------------------------------
+    -- Islands + Hogyoku
     --------------------------------------------------
 
     local Islands = {
-        {Name="StarterIsland",   CF=CFrame.new(-70.0439301, -1.46258569, -298.787079, 0.139203906, 0, 0.99026376, 0, 1, 0, -0.99026376, 0, 0.139203906)},
-        {Name="SailorIsland",    CF=CFrame.new(182.106186, 5.11968851, 669.524048, 0.987685978, 0, 0.156449571, 0, 1, 0, -0.156449571, 0, 0.987685978)},
-        {Name="JungleIsland",    CF=CFrame.new(-391.223145, -1.45007324, 407.073395, 0.781941295, 0.0115707554, -0.623244643, 1.03516504e-06, 0.999827683, 0.0185634494, 0.623352051, -0.0145161739, 0.781806588)},
-        {Name="DesertIsland",    CF=CFrame.new(-687.025879, -0.750973701, -286.980438, 0.984812498, 0, -0.173621148, 0, 1, 0, 0.173621148, 0, 0.984812498)},
-        {Name="DungeonIsland",   CF=CFrame.new(1272.48401, 5, -896.021423, 0.139203906, 0, 0.99026376, 0, 1, 0, -0.99026376, 0, 0.139203906)},
-        {Name="SnowIsland",      CF=CFrame.new(-181.163071, -0.0750600696, -997.126465, 0.92051065, 0, 0.390717506, 0, 1, 0, -0.390717506, 0, 0.92051065)},
-        {Name="BossIsland",      CF=CFrame.new(593.324219, -1.51174927, -1051.1449, 0.653336763, 0, 0.757067502, 0, 1, 0, -0.757067502, 0, 0.653336763)},
-        {Name="ShibuyaStation",  CF=CFrame.new(1269.92749, 13.1078854, 233.708954, 0.970287263, 0, -0.241955817, 0, 1, 0, 0.241955817, 0, 0.970287263)},
-        {Name="HuecoMundo",      CF=CFrame.new(-541.957031, -0.79920435, 872.745544, 0.893280089, 0, -0.449500531, 0, 1, 0, 0.449500531, 0, 0.893280089)},
-        {Name="ShinjukuIsland",  CF=CFrame.new(189.823303, -0.599565983, -1642.83081, 0.985022426, 0, -0.172426403, 0, 1, 0, 0.172426403, 0, 0.985022426)},
-        {Name="SlimeIsland",     CF=CFrame.new(-981.010498, -1.79893947, 275.525635, 0.842490435, 0, 0.538711369, 0, 1, 0, -0.538711369, 0, 0.842490435)},
-        {Name="AcademyIsland",   CF=CFrame.new(962.332031, -1.91493034, 1053.56201, 0.927179396, 0, 0.374617696, 0, 1, 0, -0.374617696, 0, 0.927179396)},
-        {Name="JudgmentIsland",  CF=CFrame.new(-1028.94714, -1.90999937, -988.707703, 0.573598742, 0, -0.81913656, 0, 1, 0, 0.81913656, 0, 0.573598742)},
-        -- SoulSociety CF добавишь сам
+        {Name="StarterIsland",   Zone="Starter"},
+        {Name="SailorIsland",    Zone="SailorIsland"},
+        {Name="JungleIsland",    Zone="JungleIsland"},
+        {Name="DesertIsland",    Zone="DesertIsland"},
+        {Name="DungeonIsland",   Zone="DungeonIsland"},
+        {Name="SnowIsland",      Zone="SnowIsland"},
+        {Name="BossIsland",      Zone="BossIsland"},
+        {Name="ShibuyaStation",  Zone="ShibuyaStation"},
+        {Name="HuecoMundo",      Zone="HuecoMundo"},
+        {Name="ShinjukuIsland",  Zone="ShinjukuIsland"},
+        {Name="SlimeIsland",     Zone="SlimeIsland"},
+        {Name="AcademyIsland",   Zone="AcademyIsland"},
+        {Name="JudgmentIsland",  Zone="JudgmentIsland"},
+        --{Name="SoulSociety",   Zone="SoulSociety"},
     }
 
     local HogyokuFragments = {
@@ -250,11 +260,19 @@ local function createMainGui()
         {"Fragment6", CFrame.new(-906.39801, 15.7299957, -1260.2478, 0.990366459, 0, -0.138471082, 0, 1, 0, 0.138471082, 0, 0.990366459)},
     }
 
-    local function tp(cf)
+    local function tpCFrame(cf)
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             char.HumanoidRootPart.CFrame = cf
         end
+    end
+
+    local function serverTeleport(zoneName)
+        if not zoneName then return end
+        pcall(function()
+            TeleportUI:FireServer("Open")
+        end)
+        SafeZoneEvent:FireServer("Changed", zoneName)
     end
 
     --------------------------------------------------
@@ -347,12 +365,28 @@ local function createMainGui()
     end)
 
     --------------------------------------------------
-    -- Построение вкладок
+    -- Instant Interaction для ProximityPrompt
+    --------------------------------------------------
+
+    local function applyInstantPrompt()
+        for _, inst in ipairs(workspace:GetDescendants()) do
+            if inst:IsA("ProximityPrompt") then
+                inst.HoldDuration = 0.0001
+                -- при желании:
+                -- inst.MaxActivationDistance = 20
+            end
+        end
+        print("[SailorPieceHub] Instant Interaction applied")
+    end
+
+    --------------------------------------------------
+    -- Вкладки
     --------------------------------------------------
 
     local function buildIslandsTab()
         clearContent()
         local y = 0
+
         for _, isl in ipairs(Islands) do
             local b = Instance.new("TextButton")
             b.Size = UDim2.new(1, -10, 0, 28)
@@ -364,9 +398,11 @@ local function createMainGui()
             b.TextColor3 = Color3.new(1,1,1)
             b.TextSize = 14
             b.Parent = content
+
             b.MouseButton1Click:Connect(function()
-                tp(isl.CF)
+                serverTeleport(isl.Zone)
             end)
+
             y = y + 30
         end
 
@@ -381,9 +417,11 @@ local function createMainGui()
             b.TextColor3 = Color3.new(1,1,1)
             b.TextSize = 14
             b.Parent = content
+
             b.MouseButton1Click:Connect(function()
-                tp(data[2])
+                tpCFrame(data[2])
             end)
+
             y = y + 30
         end
 
@@ -445,7 +483,7 @@ local function createMainGui()
                     b.MouseButton1Click:Connect(function()
                         local hrp = npc:FindFirstChild("HumanoidRootPart")
                         if hrp then
-                            tp(hrp.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
+                            tpCFrame(hrp.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
                         end
                     end)
                     y = y + 30
@@ -473,19 +511,33 @@ local function createMainGui()
                     b.TextSize = 14
                     b.Parent = content
                     b.MouseButton1Click:Connect(function()
-                        tp(npc.HumanoidRootPart.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
+                        tpCFrame(npc.HumanoidRootPart.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
                     end)
                     y = y + 30
                 end
             end
         end
-        content.CanvasSize = UDim2.new(0,0,0,y+10)
+
+        -- кнопка Instant Interaction
+        local instantBtn = Instance.new("TextButton")
+        instantBtn.Size = UDim2.new(1, -10, 0, 28)
+        instantBtn.Position = UDim2.new(0, 0, 0, y + 5)
+        instantBtn.BackgroundColor3 = Color3.fromRGB(90, 140, 255)
+        instantBtn.BorderSizePixel = 0
+        instantBtn.Font = Enum.Font.GothamBold
+        instantBtn.Text = "Instant Interaction (Prompts)"
+        instantBtn.TextColor3 = Color3.new(1,1,1)
+        instantBtn.TextSize = 14
+        instantBtn.Parent = content
+
+        instantBtn.MouseButton1Click:Connect(applyInstantPrompt)
+
+        content.CanvasSize = UDim2.new(0,0,0,y+40)
     end
 
-    -- первая вкладка по умолчанию
+    -- первая вкладка
     buildIslandsTab()
 
-    -- обновление контента при смене таба
     RunService.RenderStepped:Connect(function()
         if currentTab == "Islands" then
             if not content:FindFirstChildOfClass("TextButton") then
@@ -528,7 +580,7 @@ local function createMainGui()
 end
 
 --------------------------------------------------
--- Запуск: сначала welcome, потом GUI
+-- Старт
 --------------------------------------------------
 
 showWelcomeAndThen(createMainGui)
