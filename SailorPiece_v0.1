@@ -1,123 +1,534 @@
--- Sailor Piece Hub v1 (safe for Xeno / Wave / Solara)
+-- 🌊 Sailor Piece | Aisberg-style Hub v1 (Xeno/Wave/Solara)
+
 if getgenv and getgenv().SailorPieceHubLoaded then return end
 if getgenv then getgenv().SailorPieceHubLoaded = true end
 
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local Players      = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS          = game:GetService("UserInputService")
+local RunService   = game:GetService("RunService")
 
--- безопасно создаём GUI
-local ok, coreGui = pcall(function()
-    return game:GetService("CoreGui")
-end)
-local parentGui = ok and coreGui or player:WaitForChild("PlayerGui")
+local LocalPlayer = Players.LocalPlayer
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "SailorPieceHub"
-gui.ResetOnSpawn = false
-gui.Parent = parentGui
+--------------------------------------------------
+-- Welcome баннер (Aisberg стиль)
+--------------------------------------------------
 
--- простая рамка, без наворотов
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 260, 0, 360)
-frame.Position = UDim2.new(0, 20, 0, 20)
-frame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+local function showWelcomeAndThen(callback)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "AisbergHub_Welcome"
+    gui.ResetOnSpawn = false
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
-title.BackgroundTransparency = 1
-title.Text = "Sailor Piece Hub"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.SourceSansBold
-title.TextScaled = true
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 420, 0, 80)
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    frame.BorderSizePixel = 0
+    frame.BackgroundTransparency = 1
+    frame.Parent = gui
 
-local scroll = Instance.new("ScrollingFrame", frame)
-scroll.Size = UDim2.new(1,-10,1,-80)
-scroll.Position = UDim2.new(0,5,0,40)
-scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 6
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
 
--- Чистый телепорт без Tween и прочего
-local function tp(cf)
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = cf
-    end
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1.5
+    stroke.Color = Color3.fromRGB(90, 140, 255)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Transparency = 1
+    stroke.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 12, 0, 12)
+    title.Size = UDim2.new(1, -24, 0, 26)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 22
+    title.TextXAlignment = Enum.TextXAlignment.Center
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextTransparency = 1
+    title.Text = "WELCOME TO THE SAILOR PIECE HUB!"
+    title.Parent = frame
+
+    local desc = Instance.new("TextLabel")
+    desc.BackgroundTransparency = 1
+    desc.Position = UDim2.new(0, 12, 0, 40)
+    desc.Size = UDim2.new(1, -24, 0, 26)
+    desc.Font = Enum.Font.Gotham
+    desc.TextSize = 14
+    desc.TextWrapped = true
+    desc.TextXAlignment = Enum.TextXAlignment.Center
+    desc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    desc.TextTransparency = 1
+    desc.Text = "Sailor Piece • Islands • AutoFarm • Boss & NPC Hub"
+    desc.Parent = frame
+
+    local inInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(frame,  inInfo, {BackgroundTransparency = 0.05}):Play()
+    TweenService:Create(stroke, inInfo, {Transparency = 0}):Play()
+    TweenService:Create(title,  inInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(desc,   inInfo, {TextTransparency = 0.1}):Play()
+    task.wait(0.45)
+
+    task.wait(2.0)
+
+    local outInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    TweenService:Create(frame,  outInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(stroke, outInfo, {Transparency = 1}):Play()
+    TweenService:Create(title,  outInfo, {TextTransparency = 1}):Play()
+    TweenService:Create(desc,   outInfo, {TextTransparency = 1}):Play()
+    task.wait(0.45)
+
+    gui:Destroy()
+    if callback then callback() end
 end
 
--- ПРИМЕРНЫЕ координаты, ты подставишь реальные
-local islands = {
-    {name="Starter",      pos=CFrame.new(0,50,0)},
-    {name="Sailor",       pos=CFrame.new(500,50,0)},
-    {name="Jungle",       pos=CFrame.new(1000,50,500)},
-    {name="Desert",       pos=CFrame.new(1500,50,1000)},
-    {name="Snow",         pos=CFrame.new(2000,50,1500)},
-    {name="Shibuya",      pos=CFrame.new(3000,100,2000)},
-    {name="Hueco Mundo",  pos=CFrame.new(5000,50,3000)},
-    {name="Judgment",     pos=CFrame.new(-5000,100,8000)},
-    {name="Soul Society", pos=CFrame.new(12000,50,-3000)},
-}
+--------------------------------------------------
+-- Основной GUI (после welcome)
+--------------------------------------------------
 
-for i, isl in ipairs(islands) do
-    local btn = Instance.new("TextButton", scroll)
-    btn.Size = UDim2.new(1,-10,0,30)
-    btn.Position = UDim2.new(0,0,(i-1)*0.07,0)
-    btn.Text = "TP: "..isl.name
-    btn.BackgroundColor3 = Color3.fromRGB(0,140,0)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.SourceSans
-    btn.TextScaled = true
+local function createMainGui()
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-    btn.MouseButton1Click:Connect(function()
-        tp(isl.pos)
+    --------------------------------------------------
+    -- Anti AFK
+    --------------------------------------------------
+
+    warn("[SailorPieceHub] Anti AFK launching")
+    LocalPlayer.Idled:Connect(function()
+        warn("[SailorPieceHub] Anti AFK triggered")
+        local vu = game:GetService("VirtualUser")
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
     end)
-end
-scroll.CanvasSize = UDim2.new(0,0,0,#islands*0.08)
 
--- AutoFarm toggle
-local autoFarm = false
+    --------------------------------------------------
+    -- GUI каркас (как в Midnight Chasers)
+    --------------------------------------------------
 
-local toggle = Instance.new("TextButton", frame)
-toggle.Size = UDim2.new(1,-20,0,30)
-toggle.Position = UDim2.new(0,10,1,-35)
-toggle.Text = "AutoFarm: OFF"
-toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
-toggle.TextColor3 = Color3.new(1,1,1)
-toggle.Font = Enum.Font.SourceSansBold
-toggle.TextScaled = true
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SailorPieceGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
 
-toggle.MouseButton1Click:Connect(function()
-    autoFarm = not autoFarm
-    toggle.Text = "AutoFarm: "..(autoFarm and "ON" or "OFF")
-    toggle.BackgroundColor3 = autoFarm and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
-end)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 270, 0, 340)
+    mainFrame.Position = UDim2.new(0, 20, 0.5, -170)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = true
+    mainFrame.Parent = screenGui
 
--- Простой автофарм: ищем мобов по имени и бьём Tool’ом
-task.spawn(function()
-    while true do
-        if autoFarm and player.Character then
-            local char = player.Character
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, mob in ipairs(workspace:GetChildren()) do
-                    if mob:IsA("Model")
-                        and mob:FindFirstChild("Humanoid")
-                        and mob:FindFirstChild("HumanoidRootPart")
-                        and (mob.Name:find("Mob") or mob.Name:find("Swordsman") or mob.Name:find("Quincy")) then
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    title.BorderSizePixel = 0
+    title.Font = Enum.Font.GothamBold
+    title.Text = "Sailor Piece | Aisberg Hub"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 16
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = mainFrame
 
-                        hrp.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0,5,0)
-                        local tool = char:FindFirstChildOfClass("Tool")
-                        if tool then
-                            pcall(function()
-                                tool:Activate()
-                            end)
-                        end
-                        task.wait(0.1)
-                    end
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseButton"
+    closeBtn.Size = UDim2.new(0, 30, 1, 0)
+    closeBtn.Position = UDim2.new(1, -30, 0, 0)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Text = "X"
+    closeBtn.TextSize = 18
+    closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    closeBtn.Parent = title
+
+    closeBtn.MouseButton1Click:Connect(function()
+        print("[SailorPieceHub] GUI closed")
+        screenGui:Destroy()
+    end)
+
+    --------------------------------------------------
+    -- Тоггл GUI на G
+    --------------------------------------------------
+
+    UIS.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.KeyCode == Enum.KeyCode.G then
+            if screenGui and screenGui.Parent then
+                screenGui.Enabled = not screenGui.Enabled
+                print("[SailorPieceHub] GUI toggled, Enabled =", screenGui.Enabled)
+            end
+        end
+    end)
+
+    --------------------------------------------------
+    -- Tabs + Content
+    --------------------------------------------------
+
+    local tabBar = Instance.new("Frame")
+    tabBar.Size = UDim2.new(1, 0, 0, 28)
+    tabBar.Position = UDim2.new(0, 0, 0, 30)
+    tabBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    tabBar.BorderSizePixel = 0
+    tabBar.Parent = mainFrame
+
+    local content = Instance.new("ScrollingFrame")
+    content.Size = UDim2.new(1, -10, 1, -100)
+    content.Position = UDim2.new(0, 5, 0, 60)
+    content.BackgroundTransparency = 1
+    content.BorderSizePixel = 0
+    content.ScrollBarThickness = 6
+    content.Parent = mainFrame
+
+    local bottom = Instance.new("Frame")
+    bottom.Size = UDim2.new(1, 0, 0, 40)
+    bottom.Position = UDim2.new(0, 0, 1, -40)
+    bottom.BackgroundTransparency = 1
+    bottom.Parent = mainFrame
+
+    local function clearContent()
+        for _,v in ipairs(content:GetChildren()) do
+            if v:IsA("GuiObject") then v:Destroy() end
+        end
+    end
+
+    local tabs = {"Islands","Mobs","Bosses","NPCs"}
+    local currentTab = "Islands"
+
+    local function makeTabButton(name, index)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(0.25, -2, 1, 0)
+        b.Position = UDim2.new((index-1)*0.25, 0, 0, 0)
+        b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        b.BorderSizePixel = 0
+        b.Font = Enum.Font.GothamBold
+        b.Text = name
+        b.TextColor3 = Color3.fromRGB(200,200,200)
+        b.TextSize = 12
+        b.Parent = tabBar
+
+        b.MouseButton1Click:Connect(function()
+            currentTab = name
+            clearContent()
+        end)
+    end
+
+    for i,n in ipairs(tabs) do
+        makeTabButton(n, i)
+    end
+
+    --------------------------------------------------
+    -- Данные для TP
+    --------------------------------------------------
+
+    local Islands = {
+        {Name="StarterIsland",   CF=CFrame.new(-70.0439301, -1.46258569, -298.787079, 0.139203906, 0, 0.99026376, 0, 1, 0, -0.99026376, 0, 0.139203906)},
+        {Name="SailorIsland",    CF=CFrame.new(182.106186, 5.11968851, 669.524048, 0.987685978, 0, 0.156449571, 0, 1, 0, -0.156449571, 0, 0.987685978)},
+        {Name="JungleIsland",    CF=CFrame.new(-391.223145, -1.45007324, 407.073395, 0.781941295, 0.0115707554, -0.623244643, 1.03516504e-06, 0.999827683, 0.0185634494, 0.623352051, -0.0145161739, 0.781806588)},
+        {Name="DesertIsland",    CF=CFrame.new(-687.025879, -0.750973701, -286.980438, 0.984812498, 0, -0.173621148, 0, 1, 0, 0.173621148, 0, 0.984812498)},
+        {Name="DungeonIsland",   CF=CFrame.new(1272.48401, 5, -896.021423, 0.139203906, 0, 0.99026376, 0, 1, 0, -0.99026376, 0, 0.139203906)},
+        {Name="SnowIsland",      CF=CFrame.new(-181.163071, -0.0750600696, -997.126465, 0.92051065, 0, 0.390717506, 0, 1, 0, -0.390717506, 0, 0.92051065)},
+        {Name="BossIsland",      CF=CFrame.new(593.324219, -1.51174927, -1051.1449, 0.653336763, 0, 0.757067502, 0, 1, 0, -0.757067502, 0, 0.653336763)},
+        {Name="ShibuyaStation",  CF=CFrame.new(1269.92749, 13.1078854, 233.708954, 0.970287263, 0, -0.241955817, 0, 1, 0, 0.241955817, 0, 0.970287263)},
+        {Name="HuecoMundo",      CF=CFrame.new(-541.957031, -0.79920435, 872.745544, 0.893280089, 0, -0.449500531, 0, 1, 0, 0.449500531, 0, 0.893280089)},
+        {Name="ShinjukuIsland",  CF=CFrame.new(189.823303, -0.599565983, -1642.83081, 0.985022426, 0, -0.172426403, 0, 1, 0, 0.172426403, 0, 0.985022426)},
+        {Name="SlimeIsland",     CF=CFrame.new(-981.010498, -1.79893947, 275.525635, 0.842490435, 0, 0.538711369, 0, 1, 0, -0.538711369, 0, 0.842490435)},
+        {Name="AcademyIsland",   CF=CFrame.new(962.332031, -1.91493034, 1053.56201, 0.927179396, 0, 0.374617696, 0, 1, 0, -0.374617696, 0, 0.927179396)},
+        {Name="JudgmentIsland",  CF=CFrame.new(-1028.94714, -1.90999937, -988.707703, 0.573598742, 0, -0.81913656, 0, 1, 0, 0.81913656, 0, 0.573598742)},
+        -- SoulSociety CF добавишь сам
+    }
+
+    local HogyokuFragments = {
+        {"Fragment1", CFrame.new(-424.589447, 56.6024628, -1235.32568, 0.289153755, 0.168311402, 0.942370117, -0.00750803947, 0.984790444, -0.173584118, -0.957253277, 0.0431171507, 0.286019504)},
+        {"Fragment2", CFrame.new(1636.70898, 85.5206757, 247.291901, 0.989795089, 0, -0.142497987, 0, 1, 0, 0.142497987, 0, 0.989795089)},
+        {"Fragment3", CFrame.new(-636.008423, 22.5490417, 1206.28113, 0.923217237, -0.345339119, 0.16855523, 0.381866992, 0.873522758, -0.301886827, -0.0429835021, 0.343072802, 0.938324809)},
+        {"Fragment4", CFrame.new(648.099976, 137.94455, -2069.59741, 0.772088885, -0.631137073, 0.0744634345, 0.628663361, 0.775662899, 0.0559423678, -0.0930658206, 0.00361994654, 0.995653391)},
+        {"Fragment5", CFrame.new(-1206.52283, 30.8849335, 463.206787, 0.993406057, -0.0171359815, 0.113360971, -0.00357546285, 0.983655572, 0.180024818, -0.114593059, -0.179243073, 0.977108181)},
+        {"Fragment6", CFrame.new(-906.39801, 15.7299957, -1260.2478, 0.990366459, 0, -0.138471082, 0, 1, 0, 0.138471082, 0, 0.990366459)},
+    }
+
+    local function tp(cf)
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = cf
+        end
+    end
+
+    --------------------------------------------------
+    -- Автофарм ядро (NPC's)
+    --------------------------------------------------
+
+    local AutoFarm = {
+        Enabled = false,
+        Mode = "nearest",
+        Target = nil,
+        MobNameFilter = {"Mob","Swordsman","Quincy"},
+        Distance = 80,
+        HeightOffset = 5,
+    }
+
+    function AutoFarm:SetMode(mode)
+        self.Mode = mode
+    end
+
+    function AutoFarm:SetEnabled(state)
+        self.Enabled = state
+    end
+
+    local function isValidCombatNPC(model)
+        if not model:IsA("Model") then return false end
+        if not model:FindFirstChild("Humanoid") then return false end
+        if not model:FindFirstChild("HumanoidRootPart") then return false end
+        if model.Humanoid.Health <= 0 then return false end
+        for _, key in ipairs(AutoFarm.MobNameFilter) do
+            if string.find(string.lower(model.Name), string.lower(key)) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function getNearestNPCFolder(originPos)
+        local folder = workspace:FindFirstChild("NPC's")
+        if not folder then return nil end
+        local nearest, dist = nil, AutoFarm.Distance
+        for _, npc in ipairs(folder:GetChildren()) do
+            if isValidCombatNPC(npc) then
+                local hrp = npc.HumanoidRootPart
+                local d = (hrp.Position - originPos).Magnitude
+                if d < dist then
+                    dist = d
+                    nearest = npc
                 end
             end
         end
-        task.wait(0.3)
+        return nearest
     end
-end)
 
-print("[Sailor Piece Hub] Loaded")
+    local function getOffsetCFrame(targetHRP)
+        local base = targetHRP.CFrame
+        local mode = AutoFarm.Mode
+        if mode == "above" then
+            return base * CFrame.new(0, AutoFarm.HeightOffset, 0)
+        elseif mode == "below" then
+            return base * CFrame.new(0, -AutoFarm.HeightOffset, 0)
+        elseif mode == "back" then
+            return base * CFrame.new(0, 0, -AutoFarm.HeightOffset)
+        elseif mode == "nearest" then
+            return base * CFrame.new(0, AutoFarm.HeightOffset, 0)
+        end
+        return base
+    end
+
+    RunService.Heartbeat:Connect(function()
+        if not AutoFarm.Enabled then return end
+        local char = LocalPlayer.Character
+        if not (char and char:FindFirstChild("HumanoidRootPart")) then return end
+        local myHRP = char.HumanoidRootPart
+
+        if not AutoFarm.Target
+            or not AutoFarm.Target.Parent
+            or not AutoFarm.Target:FindFirstChild("Humanoid")
+            or AutoFarm.Target.Humanoid.Health <= 0
+        then
+            AutoFarm.Target = getNearestNPCFolder(myHRP.Position)
+        end
+
+        local target = AutoFarm.Target
+        if target and target:FindFirstChild("HumanoidRootPart") then
+            local goalCF = getOffsetCFrame(target.HumanoidRootPart)
+            myHRP.CFrame = goalCF
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then pcall(function() tool:Activate() end) end
+        end
+    end)
+
+    --------------------------------------------------
+    -- Построение вкладок
+    --------------------------------------------------
+
+    local function buildIslandsTab()
+        clearContent()
+        local y = 0
+        for _, isl in ipairs(Islands) do
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(1, -10, 0, 28)
+            b.Position = UDim2.new(0, 0, 0, y)
+            b.BackgroundColor3 = Color3.fromRGB(0,140,0)
+            b.BorderSizePixel = 0
+            b.Font = Enum.Font.Gotham
+            b.Text = "TP: "..isl.Name
+            b.TextColor3 = Color3.new(1,1,1)
+            b.TextSize = 14
+            b.Parent = content
+            b.MouseButton1Click:Connect(function()
+                tp(isl.CF)
+            end)
+            y = y + 30
+        end
+
+        for _, data in ipairs(HogyokuFragments) do
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(1, -10, 0, 28)
+            b.Position = UDim2.new(0, 0, 0, y)
+            b.BackgroundColor3 = Color3.fromRGB(120,60,0)
+            b.BorderSizePixel = 0
+            b.Font = Enum.Font.Gotham
+            b.Text = "TP Hogyoku "..data[1]
+            b.TextColor3 = Color3.new(1,1,1)
+            b.TextSize = 14
+            b.Parent = content
+            b.MouseButton1Click:Connect(function()
+                tp(data[2])
+            end)
+            y = y + 30
+        end
+
+        content.CanvasSize = UDim2.new(0,0,0,y+10)
+    end
+
+    local function buildMobsTab()
+        clearContent()
+        local y = 0
+        local modes = {"nearest","above","back","below"}
+        for _, m in ipairs(modes) do
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(1, -10, 0, 28)
+            b.Position = UDim2.new(0, 0, 0, y)
+            b.BackgroundColor3 = Color3.fromRGB(60,60,110)
+            b.BorderSizePixel = 0
+            b.Font = Enum.Font.Gotham
+            b.Text = "Mode: "..m
+            b.TextColor3 = Color3.new(1,1,1)
+            b.TextSize = 14
+            b.Parent = content
+            b.MouseButton1Click:Connect(function()
+                AutoFarm:SetMode(m)
+            end)
+            y = y + 30
+        end
+
+        local lab = Instance.new("TextLabel")
+        lab.Size = UDim2.new(1, -10, 0, 40)
+        lab.Position = UDim2.new(0, 0, 0, y+5)
+        lab.BackgroundTransparency = 1
+        lab.Font = Enum.Font.Gotham
+        lab.Text = "Mob filter:\nMob, Swordsman, Quincy"
+        lab.TextColor3 = Color3.new(1,1,1)
+        lab.TextSize = 14
+        lab.TextWrapped = true
+        lab.Parent = content
+
+        content.CanvasSize = UDim2.new(0,0,0,y+60)
+    end
+
+    local function buildBossesTab()
+        clearContent()
+        local folder = workspace:FindFirstChild("NPC's")
+        local y = 0
+        if folder then
+            for _, npc in ipairs(folder:GetChildren()) do
+                if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
+                    local b = Instance.new("TextButton")
+                    b.Size = UDim2.new(1, -10, 0, 28)
+                    b.Position = UDim2.new(0, 0, 0, y)
+                    b.BackgroundColor3 = Color3.fromRGB(120,0,0)
+                    b.BorderSizePixel = 0
+                    b.Font = Enum.Font.Gotham
+                    b.Text = "TP Boss: "..npc.Name
+                    b.TextColor3 = Color3.new(1,1,1)
+                    b.TextSize = 14
+                    b.Parent = content
+                    b.MouseButton1Click:Connect(function()
+                        local hrp = npc:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            tp(hrp.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
+                        end
+                    end)
+                    y = y + 30
+                end
+            end
+        end
+        content.CanvasSize = UDim2.new(0,0,0,y+10)
+    end
+
+    local function buildNPCsTab()
+        clearContent()
+        local folder = workspace:FindFirstChild("ServiceNPC's")
+        local y = 0
+        if folder then
+            for _, npc in ipairs(folder:GetChildren()) do
+                if npc:IsA("Model") and npc:FindFirstChild("HumanoidRootPart") then
+                    local b = Instance.new("TextButton")
+                    b.Size = UDim2.new(1, -10, 0, 28)
+                    b.Position = UDim2.new(0, 0, 0, y)
+                    b.BackgroundColor3 = Color3.fromRGB(0,80,140)
+                    b.BorderSizePixel = 0
+                    b.Font = Enum.Font.Gotham
+                    b.Text = "TP NPC: "..npc.Name
+                    b.TextColor3 = Color3.new(1,1,1)
+                    b.TextSize = 14
+                    b.Parent = content
+                    b.MouseButton1Click:Connect(function()
+                        tp(npc.HumanoidRootPart.CFrame * CFrame.new(0, AutoFarm.HeightOffset, 0))
+                    end)
+                    y = y + 30
+                end
+            end
+        end
+        content.CanvasSize = UDim2.new(0,0,0,y+10)
+    end
+
+    -- первая вкладка по умолчанию
+    buildIslandsTab()
+
+    -- обновление контента при смене таба
+    RunService.RenderStepped:Connect(function()
+        if currentTab == "Islands" then
+            if not content:FindFirstChildOfClass("TextButton") then
+                buildIslandsTab()
+            end
+        elseif currentTab == "Mobs" then
+            if not content:FindFirstChildOfClass("TextButton") then
+                buildMobsTab()
+            end
+        elseif currentTab == "Bosses" then
+            if not content:FindFirstChildOfClass("TextButton") then
+                buildBossesTab()
+            end
+        elseif currentTab == "NPCs" then
+            if not content:FindFirstChildOfClass("TextButton") then
+                buildNPCsTab()
+            end
+        end
+    end)
+
+    -- нижний тоггл автофарма
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(1,-20,0,30)
+    toggle.Position = UDim2.new(0,10,0,5)
+    toggle.BackgroundColor3 = Color3.fromRGB(170,0,0)
+    toggle.BorderSizePixel = 0
+    toggle.Font = Enum.Font.GothamBold
+    toggle.Text = "AutoFarm: OFF"
+    toggle.TextColor3 = Color3.new(1,1,1)
+    toggle.TextSize = 14
+    toggle.Parent = bottom
+
+    toggle.MouseButton1Click:Connect(function()
+        AutoFarm.Enabled = not AutoFarm.Enabled
+        toggle.Text = "AutoFarm: "..(AutoFarm.Enabled and "ON" or "OFF")
+        toggle.BackgroundColor3 = AutoFarm.Enabled and Color3.fromRGB(0,170,0) or Color3.fromRGB(170,0,0)
+    end)
+
+    print("[SailorPieceHub] Loaded")
+end
+
+--------------------------------------------------
+-- Запуск: сначала welcome, потом GUI
+--------------------------------------------------
+
+showWelcomeAndThen(createMainGui)
