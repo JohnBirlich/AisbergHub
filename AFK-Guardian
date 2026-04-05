@@ -1,0 +1,1076 @@
+-- // Aisberg Guardian
+
+if getgenv and getgenv().AisbergGuardianLoaded then return end
+if getgenv then getgenv().AisbergGuardianLoaded = true end
+
+local Players          = game:GetService("Players")
+local StarterGui       = game:GetService("StarterGui")
+local ReplicatedFirst  = game:GetService("ReplicatedFirst")
+local CoreGui          = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser      = game:GetService("VirtualUser")
+local RunService       = game:GetService("RunService")
+local TweenService     = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+local AisbergGuardian = {
+    scanResult         = nil,
+    ignoreIfOtherFound = true,
+    enabled            = false,
+    connections        = {},
+}
+
+--------------------------------------------------
+-- Environment
+--------------------------------------------------
+
+local environment = {
+    isMobile        = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled,
+    isPC            = UserInputService.KeyboardEnabled,
+    hasVirtualUser  = pcall(function() return VirtualUser:CaptureController() end),
+    hasCamera       = workspace.CurrentCamera ~= nil,
+    executor        = identifyexecutor and identifyexecutor() or "Unknown",
+    isWindowFocused = true,
+}
+
+print("=== Aisberg Guardian Environment ===")
+print("Platform:",   environment.isMobile and "Mobile" or "PC")
+print("Executor:",   environment.executor)
+print("VirtualUser:",environment.hasVirtualUser and "Available" or "Unavailable")
+print("Camera:",     environment.hasCamera and "Available" or "Unavailable")
+print("================================")
+
+--------------------------------------------------
+-- Timing
+--------------------------------------------------
+
+local settings = {
+    baseInterval        = 60,
+    jitter              = 0.4,
+    unfocusedMultiplier = 0.7,
+    burstChance         = 0.15,
+}
+
+local function randRange(a, b)
+    return a + math.random() * (b - a)
+end
+
+local function nextWait()
+    local base     = settings.baseInterval
+    local jitter   = base * settings.jitter
+    local waitTime = base + randRange(-jitter, jitter)
+
+    if math.random() < 0.10 then
+        waitTime = waitTime + randRange(15, 45)
+    end
+
+    if not environment.isWindowFocused then
+        waitTime = waitTime * settings.unfocusedMultiplier
+    end
+
+    return math.max(8, waitTime)
+end
+
+--------------------------------------------------
+-- Scanner
+--------------------------------------------------
+
+local suspiciousKeywords = {
+    -- AFK / Anti-AFK
+    "afk", "anti afk", "antiafk", "anti-afk", "noafk", "no afk",
+    "stayonline", "stay online", "stay-afk",
+
+    -- rejoin / auto rejoin
+    "rejoin", "auto rejoin", "auto-rejoin", "autorejoin",
+    "antirejoin", "anti rejoin", "autoreconnect", "auto reconnect",
+    "reconnect",
+
+    -- generic guardian / protect
+    "afkguard", "afk guardian", "aisberg guardian", "guard afk",
+}
+
+-- безопасная проверка строки
+local function containsKeyword(str)
+    if not str or type(str) ~= "string" then return false end
+    local s = string.lower(str)
+    for _, kw in ipairs(suspiciousKeywords) do
+        if string.find(s, kw, 1, true) then
+            return true, kw
+        end
+    end
+    return false
+end
+
+local function isSystemPath(fullName)
+    if not fullName then return false end
+    fullName = string.lower(fullName)
+    if fullName:find("corepackages",   1, true) then return true end
+    if fullName:find("robloxgui",      1, true) then return true end
+    if fullName:find("voicechatcore",  1, true) then return true end
+    if fullName:find("experiencechat", 1, true) then return true end
+    return false
+end
+
+-- проверяем Name и Source
+local function checkInstanceForKeywords(inst)
+    local hits = {}
+
+    -- имя
+    local okName, kwName = pcall(function()
+        local has, kw = containsKeyword(inst.Name)
+        if has then return kw end
+    end)
+    if okName and kwName then
+        table.insert(hits, { field = "Name", match = kwName })
+    end
+
+    -- Source (если доступен)
+    if inst:IsA("LocalScript") or inst:IsA("ModuleScript") or inst:IsA("Script") then
+        local okSrc, kwSrc = pcall(function()
+            local src = inst.Source
+            local has, kw = containsKeyword(src)
+            if has then return kw end
+        end)
+        if okSrc and kwSrc then
+            table.insert(hits, { field = "Source", match = kwSrc })
+        end
+    end
+
+    return hits
+end
+
+local function scanInstances()
+    local results = {}
+    local roots = {
+        workspace,
+        StarterGui,
+        ReplicatedFirst,
+        LocalPlayer:FindFirstChild("PlayerGui"),
+        CoreGui,
+    }
+
+    local maxFound = 100
+
+    for _, root in ipairs(roots) do
+        if root then
+            for _, inst in ipairs(root:GetDescendants()) do
+                if #results >= maxFound then
+                    return results
+                end
+
+                if inst:IsA("LocalScript") or inst:IsA("ModuleScript")
+                or inst:IsA("Script") or inst:IsA("ScreenGui") or inst:IsA("Folder") then
+
+                    local fullName = inst:GetFullName()
+                    if not isSystemPath(fullName) then
+                        local hits = checkInstanceForKeywords(inst)
+                        if #hits > 0 then
+                            table.insert(results, {
+                                instance = inst,
+                                name     = inst.Name,
+                                class    = inst.ClassName,
+                                path     = fullName,
+                                matches  = hits,
+                            })
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return results
+end
+
+local function scanGlobals(tbl, sourceName)
+    local res = {}
+    if typeof(tbl) ~= "table" then return res end
+
+    for k, v in pairs(tbl) do
+        if typeof(k) == "string" then
+            local ok, hit = containsKeyword(k)
+            if ok then
+                table.insert(res, {
+                    key       = k,
+                    valueType = typeof(v),
+                    source    = sourceName,
+                    match     = hit
+                })
+            end
+        end
+    end
+
+    return res
+end
+
+function AisbergGuardian.scanForAisbergHelpers()
+    local foundInstances = scanInstances()
+
+    local okG,   globalTable = pcall(function() return _G end)
+    local okGenv,genvTable   = pcall(function()
+        if getgenv then
+            return getgenv()
+        end
+    end)
+
+    local foundGlobals = {}
+    if okG and globalTable then
+        for _, info in ipairs(scanGlobals(globalTable, "_G")) do
+            table.insert(foundGlobals, info)
+        end
+    end
+    if okGenv and genvTable and genvTable ~= _G then
+        for _, info in ipairs(scanGlobals(genvTable, "getgenv")) do
+            table.insert(foundGlobals, info)
+        end
+    end
+
+    AisbergGuardian.scanResult = {
+        instances = foundInstances,
+        globals   = foundGlobals
+    }
+
+    return AisbergGuardian.scanResult
+end
+
+function AisbergGuardian.hasExternalAntiAisberg()
+    local res = AisbergGuardian.scanResult or AisbergGuardian.scanForAisbergHelpers()
+
+    local count = 0
+    if res.instances then
+        count = count + #res.instances
+    end
+    if res.globals then
+        count = count + #res.globals
+    end
+
+    return count > 0, count
+end
+
+local function shouldEnableOurAntiAisberg()
+    if not AisbergGuardian.ignoreIfOtherFound then
+        return true
+    end
+
+    local found, count = AisbergGuardian.hasExternalAntiAisberg()
+    if found then
+        warn("[Aisberg Guardian] External anti-Aisberg/auto-rejoin scripts detected:", count)
+        return false
+    end
+
+    return true
+end
+
+--------------------------------------------------
+-- Actions
+--------------------------------------------------
+
+local function cameraNudge()
+    if not environment.hasCamera then return end
+
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+
+    local original = camera.CFrame
+    local yaw   = math.rad(randRange(-1.5, 1.5))
+    local pitch = math.rad(randRange(-0.8, 0.8))
+    local target = original * CFrame.Angles(pitch, yaw, 0)
+
+    local ok = pcall(function()
+        local tween = TweenService:Create(camera,
+            TweenInfo.new(randRange(0.15, 0.3), Enum.EasingStyle.Sine),
+            {CFrame = target}
+        )
+        tween:Play()
+        tween.Completed:Wait()
+        TweenService:Create(camera,
+            TweenInfo.new(randRange(0.15, 0.3), Enum.EasingStyle.Sine),
+            {CFrame = original}
+        ):Play()
+    end)
+
+    if not ok then
+        camera.CFrame = camera.CFrame:Lerp(target, 0.5)
+        task.wait(0.2)
+        camera.CFrame = camera.CFrame:Lerp(original, 0.5)
+    end
+end
+
+local function virtualAction()
+    if not environment.hasVirtualUser then return end
+
+    local count = math.random(1, 2)
+    for _ = 1, count do
+        if not AisbergGuardian.enabled then break end
+
+        local ok = pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
+        end)
+
+        if not ok then
+            pcall(function()
+                VirtualUser:Button2Down(Vector2.new(0, 0), workspace)
+                task.wait(0.05)
+                VirtualUser:Button2Up(Vector2.new(0, 0), workspace)
+            end)
+        end
+
+        task.wait(randRange(0.4, 1.2))
+    end
+end
+
+local function performAction()
+    if not AisbergGuardian.enabled then return end
+
+    local modes = {}
+    if environment.hasCamera      then table.insert(modes, cameraNudge)   end
+    if environment.hasVirtualUser then table.insert(modes, virtualAction) end
+    if #modes == 0 then return end
+
+    local roll = math.random(1, 10)
+    if roll <= 5 and environment.hasCamera then
+        cameraNudge()
+    elseif roll <= 8 and environment.hasVirtualUser then
+        virtualAction()
+    else
+        if environment.hasCamera then
+            cameraNudge()
+            task.wait(randRange(0.5, 1))
+        end
+        if environment.hasVirtualUser then
+            virtualAction()
+        end
+    end
+end
+
+-- Idled hook
+local antiAisbergConnection
+local function startIdledHook()
+    if antiAisbergConnection then
+        antiAisbergConnection:Disconnect()
+        antiAisbergConnection = nil
+    end
+
+    antiAisbergConnection = LocalPlayer.Idled:Connect(function()
+        if AisbergGuardian.enabled then
+            virtualAction()
+        end
+    end)
+end
+
+local function stopIdledHook()
+    if antiAisbergConnection then
+        antiAisbergConnection:Disconnect()
+        antiAisbergConnection = nil
+    end
+end
+
+--------------------------------------------------
+-- UI: Terminal window
+--------------------------------------------------
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AisbergGuardianGui"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = CoreGui
+
+-- main terminal frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 220, 0, 48)
+mainFrame.Position = UDim2.new(0, 40, 0, 40)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+mainFrame.BorderSizePixel = 0
+mainFrame.BackgroundTransparency = 1
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 6)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(0, 255, 120)
+mainStroke.Thickness = 1
+mainStroke.Transparency = 0.8
+mainStroke.Parent = mainFrame
+
+-- title bar
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 26)
+titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+
+local titleBarCorner = Instance.new("UICorner")
+titleBarCorner.CornerRadius = UDim.new(0, 6)
+titleBarCorner.Parent = titleBar
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -90, 1, 0)
+titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Font = Enum.Font.Code
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.TextSize = 14
+titleLabel.Text = "Aisberg Guardian :: Windows Terminal"
+titleLabel.TextColor3 = Color3.fromRGB(200, 255, 200)
+titleLabel.TextScaled = true
+titleLabel.TextWrapped = true
+titleLabel.Parent = titleBar
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 24, 0, 18)
+closeButton.Position = UDim2.new(1, -28, 0.5, -9)
+closeButton.BackgroundColor3 = Color3.fromRGB(50, 15, 15)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 80, 80)
+closeButton.Font = Enum.Font.Code
+closeButton.TextSize = 14
+closeButton.AutoButtonColor = false
+closeButton.Parent = titleBar
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 4)
+closeCorner.Parent = closeButton
+
+-- title hitbox (для drag/collapse, не закрывает кнопки)
+local titleHitbox = Instance.new("Frame")
+titleHitbox.Name = "TitleHitbox"
+titleHitbox.BackgroundTransparency = 1
+titleHitbox.BorderSizePixel = 0
+titleHitbox.Size = UDim2.new(1, -80, 1, 0)
+titleHitbox.Position = UDim2.new(0, 0, 0, 0)
+titleHitbox.Active = true
+titleHitbox.Parent = titleBar
+
+-- content area
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "Content"
+contentFrame.Size = UDim2.new(1, -10, 1, -32)
+contentFrame.Position = UDim2.new(0, 5, 0, 28)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = mainFrame
+
+-- resize corner (правый нижний)
+local resizeCorner = Instance.new("Frame")
+resizeCorner.Name = "ResizeCorner"
+resizeCorner.Size = UDim2.new(0, 14, 0, 14)
+resizeCorner.AnchorPoint = Vector2.new(1, 1)
+resizeCorner.Position = UDim2.new(1, -2, 1, -2)
+resizeCorner.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+resizeCorner.BorderSizePixel = 0
+resizeCorner.Active = true
+resizeCorner.Parent = mainFrame
+
+local resizeCornerStroke = Instance.new("UIStroke")
+resizeCornerStroke.Color = Color3.fromRGB(60, 60, 60)
+resizeCornerStroke.Thickness = 1
+resizeCornerStroke.Parent = resizeCorner
+
+local resizeCornerCorner = Instance.new("UICorner")
+resizeCornerCorner.CornerRadius = UDim.new(0, 3)
+resizeCornerCorner.Parent = resizeCorner
+
+-- left panel (status + buttons)
+local leftPanel = Instance.new("Frame")
+leftPanel.Name = "LeftPanel"
+leftPanel.Size = UDim2.new(0, 150, 1, 0)
+leftPanel.Position = UDim2.new(0, 0, 0, 0)
+leftPanel.BackgroundTransparency = 1
+leftPanel.Parent = contentFrame
+
+local sectionLabel = Instance.new("TextLabel")
+sectionLabel.Size = UDim2.new(1, 0, 0, 18)
+sectionLabel.Position = UDim2.new(0, 0, 0, 0)
+sectionLabel.BackgroundTransparency = 1
+sectionLabel.Font = Enum.Font.Code
+sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+sectionLabel.TextSize = 13
+sectionLabel.Text = "guardian>"
+sectionLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
+sectionLabel.TextScaled = true
+sectionLabel.TextWrapped = true
+sectionLabel.Parent = leftPanel
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "Status"
+statusLabel.Size = UDim2.new(1, 0, 0, 18)
+statusLabel.Position = UDim2.new(0, 0, 0, 20)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.Code
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextSize = 13
+statusLabel.TextColor3 = Color3.fromRGB(140, 255, 140)
+statusLabel.Text = "status: initializing..."
+statusLabel.TextScaled = true
+statusLabel.TextWrapped = true
+statusLabel.Parent = leftPanel
+
+local externalLabel = Instance.new("TextLabel")
+externalLabel.Name = "External"
+externalLabel.Size = UDim2.new(1, 0, 0, 18)
+externalLabel.Position = UDim2.new(0, 0, 0, 38)
+externalLabel.BackgroundTransparency = 1
+externalLabel.Font = Enum.Font.Code
+externalLabel.TextXAlignment = Enum.TextXAlignment.Left
+externalLabel.TextSize = 13
+externalLabel.TextColor3 = Color3.fromRGB(140, 200, 255)
+externalLabel.Text = "external: scanning..."
+externalLabel.TextScaled = true
+externalLabel.TextWrapped = true
+externalLabel.Parent = leftPanel
+
+local buttonsFrame = Instance.new("Frame")
+buttonsFrame.Name = "ButtonsFrame"
+buttonsFrame.Size = UDim2.new(1, 0, 0, 96)
+buttonsFrame.Position = UDim2.new(0, 0, 0, 60)
+buttonsFrame.BackgroundTransparency = 1
+buttonsFrame.Parent = leftPanel
+
+local buttonsLayout = Instance.new("UIListLayout")
+buttonsLayout.Padding = UDim.new(0, 4)
+buttonsLayout.FillDirection = Enum.FillDirection.Vertical
+buttonsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+buttonsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+buttonsLayout.Parent = buttonsFrame
+
+local function createButton(text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 22)
+    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    btn.BorderSizePixel  = 0
+    btn.Font             = Enum.Font.Code
+    btn.TextSize         = 13
+    btn.TextXAlignment   = Enum.TextXAlignment.Left
+    btn.TextColor3       = Color3.fromRGB(0, 255, 120)
+    btn.Text             = text
+    btn.AutoButtonColor  = false
+    btn.TextScaled       = true
+    btn.TextWrapped      = false
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 3)
+    corner.Parent = btn
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(0, 120, 60)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.5
+    stroke.Parent = btn
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12),
+            {BackgroundColor3 = Color3.fromRGB(25, 25, 25)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.12),
+            {BackgroundColor3 = Color3.fromRGB(18, 18, 18)}):Play()
+    end)
+
+    btn.Parent = buttonsFrame
+    return btn
+end
+
+local toggleButton = createButton("toggle (active)")
+local rescanButton = createButton("scan   (rescan)")
+local ignoreButton = createButton("ignore (external: ON)")
+local exportButton = createButton("export (clipboard/file)")
+
+-- right log panel
+local logFrame = Instance.new("Frame")
+logFrame.Name = "LogFrame"
+logFrame.Size = UDim2.new(1, -160, 1, 0)
+logFrame.Position = UDim2.new(0, 160, 0, 0)
+logFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+logFrame.BorderSizePixel = 0
+logFrame.Parent = contentFrame
+
+local logCorner = Instance.new("UICorner")
+logCorner.CornerRadius = UDim.new(0, 4)
+logCorner.Parent = logFrame
+
+local logStroke = Instance.new("UIStroke")
+logStroke.Color = Color3.fromRGB(0, 80, 40)
+logStroke.Thickness = 1
+logStroke.Transparency = 0.6
+logStroke.Parent = logFrame
+
+local logTitle = Instance.new("TextLabel")
+logTitle.Size = UDim2.new(1, -8, 0, 16)
+logTitle.Position = UDim2.new(0, 4, 0, 2)
+logTitle.BackgroundTransparency = 1
+logTitle.Font = Enum.Font.Code
+logTitle.TextXAlignment = Enum.TextXAlignment.Left
+logTitle.TextSize = 12
+logTitle.TextColor3 = Color3.fromRGB(0, 255, 120)
+logTitle.Text = "aisberg-guardian@scanner:~$ detected scripts"
+logTitle.TextScaled = true
+logTitle.TextWrapped = true
+logTitle.Parent = logFrame
+
+local scrolling = Instance.new("ScrollingFrame")
+scrolling.Name = "LogScrolling"
+scrolling.Size = UDim2.new(1, -8, 1, -22)
+scrolling.Position = UDim2.new(0, 4, 0, 18)
+scrolling.BackgroundTransparency = 1
+scrolling.BorderSizePixel = 0
+scrolling.ScrollBarThickness = 4
+scrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrolling.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrolling.Parent = logFrame
+
+local logLayout = Instance.new("UIListLayout")
+logLayout.Padding = UDim.new(0, 2)
+logLayout.FillDirection = Enum.FillDirection.Vertical
+logLayout.SortOrder = Enum.SortOrder.LayoutOrder
+logLayout.Parent = scrolling
+
+local function appendLogLine(text, color)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -4, 0, 14)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Code
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextSize = 12
+    lbl.TextColor3 = color or Color3.fromRGB(170, 255, 170)
+    lbl.Text = text
+    lbl.TextScaled = true
+    lbl.TextWrapped = true
+    lbl.Parent = scrolling
+end
+
+--------------------------------------------------
+-- Drag + collapse + appear
+--------------------------------------------------
+
+local expandedSize  = UDim2.new(0, 420, 0, 210)
+local collapsedSize = UDim2.new(0, 220, 0, 48)
+local expandedPos   = UDim2.new(0, 40, 0, 80)
+local collapsedPos  = UDim2.new(0, 40, 0, 40)
+local isCollapsed   = false
+
+-- drag по titleHitbox
+do
+    local dragging   = false
+    local dragInput  = nil
+    local dragStart  = nil
+    local startPos   = nil
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+
+    titleHitbox.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging  = true
+            dragStart = input.Position
+            startPos  = mainFrame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    titleHitbox.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+local function setVisibleState(collapsed)
+    isCollapsed = collapsed
+    local info = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local targetSize = collapsed and collapsedSize or expandedSize
+    local targetPos  = collapsed and collapsedPos  or expandedPos
+
+    TweenService:Create(mainFrame, info, {
+        Size     = targetSize,
+        Position = targetPos
+    }):Play()
+
+    contentFrame.Visible = not collapsed
+
+    if collapsed then
+        local status = AisbergGuardian.enabled and "[ON]" or "[OFF]"
+        titleLabel.Text = "Aisberg Guardian " .. status
+    else
+        titleLabel.Text = "Aisberg Guardian :: Windows Terminal"
+    end
+end
+
+-- appear from collapsed -> expanded
+do
+    mainFrame.Size = collapsedSize
+    mainFrame.Position = collapsedPos
+    mainFrame.BackgroundTransparency = 1
+    mainStroke.Transparency = 1
+
+    local info = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(mainFrame, info, {
+        BackgroundTransparency = 0,
+        Size = expandedSize,
+        Position = expandedPos
+    }):Play()
+    TweenService:Create(mainStroke, info, {
+        Transparency = 0.45
+    }):Play()
+end
+
+titleHitbox.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setVisibleState(not isCollapsed)
+    end
+end)
+
+toggleButton.MouseButton2Click:Connect(function()
+    setVisibleState(not isCollapsed)
+end)
+
+-- простой ресайз за правый нижний угол
+do
+    local resizing = false
+    local startSize
+    local startMouse
+
+    resizeCorner.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing   = true
+            startSize  = mainFrame.Size
+            startMouse = input.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    resizing = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - startMouse
+            local newW = math.max(260, startSize.X.Offset + delta.X)
+            local newH = math.max(80,  startSize.Y.Offset + delta.Y)
+
+            mainFrame.Size = UDim2.new(0, newW, 0, newH)
+        end
+    end)
+end
+
+--------------------------------------------------
+-- UI helpers + cleanup
+--------------------------------------------------
+
+local function updateStatus()
+    if AisbergGuardian.enabled then
+        statusLabel.Text = environment.isWindowFocused
+            and "status: active-protection"
+            or  "status: active (unfocused)"
+        statusLabel.TextColor3 = Color3.fromRGB(140, 255, 140)
+        toggleButton.Text = "toggle (active)"
+    else
+        statusLabel.Text = "status: inactive"
+        statusLabel.TextColor3 = Color3.fromRGB(200, 80, 80)
+        toggleButton.Text = "toggle (inactive)"
+    end
+
+    if isCollapsed then
+        local status = AisbergGuardian.enabled and "[ON]" or "[OFF]"
+        titleLabel.Text = "Aisberg Guardian " .. status
+    end
+end
+
+local function updateIgnoreButton()
+    if AisbergGuardian.ignoreIfOtherFound then
+        ignoreButton.Text = "ignore (external: ON)"
+    else
+        ignoreButton.Text = "ignore (external: OFF)"
+    end
+end
+
+local function updateExternalLabel()
+    local found, count = AisbergGuardian.hasExternalAntiAisberg()
+    if found then
+        externalLabel.Text = "external: " .. tostring(count) .. " script(s)"
+        externalLabel.TextColor3 = Color3.fromRGB(255, 210, 80)
+    else
+        externalLabel.Text = "external: none"
+        externalLabel.TextColor3 = Color3.fromRGB(140, 200, 255)
+    end
+end
+
+local function cleanup()
+    AisbergGuardian.enabled = false
+    stopIdledHook()
+
+    for _, conn in ipairs(AisbergGuardian.connections) do
+        pcall(function()
+            conn:Disconnect()
+        end)
+    end
+
+    pcall(function()
+        if screenGui then
+            screenGui:Destroy()
+        end
+    end)
+
+    if getgenv then
+        getgenv().AisbergGuardianLoaded = nil
+    end
+
+    warn("[Aisberg Guardian] Unloaded and cleaned up.")
+end
+
+closeButton.Activated:Connect(cleanup)
+
+--------------------------------------------------
+-- Focus events
+--------------------------------------------------
+
+table.insert(AisbergGuardian.connections, UserInputService.WindowFocused:Connect(function()
+    environment.isWindowFocused = true
+    if AisbergGuardian.enabled then
+        updateStatus()
+    end
+end))
+
+table.insert(AisbergGuardian.connections, UserInputService.WindowFocusReleased:Connect(function()
+    environment.isWindowFocused = false
+    if AisbergGuardian.enabled then
+        updateStatus()
+    end
+end))
+
+--------------------------------------------------
+-- Scan + export
+--------------------------------------------------
+
+local function buildExportText()
+    local res = AisbergGuardian.scanResult or AisbergGuardian.scanForAisbergHelpers()
+    local lines = {}
+
+    table.insert(lines, "=== Aisberg Guardian Scan Export ===")
+    table.insert(lines, ("Platform: %s"):format(environment.isMobile and "Mobile" or "PC"))
+    table.insert(lines, ("Executor: %s"):format(environment.executor))
+    table.insert(lines, ("VirtualUser: %s"):format(environment.hasVirtualUser and "Available" or "Unavailable"))
+    table.insert(lines, ("Camera: %s"):format(environment.hasCamera and "Available" or "Unavailable"))
+    table.insert(lines, "--------------------------------")
+
+    local count = 0
+
+    if res.instances and #res.instances > 0 then
+        table.insert(lines, "")
+        table.insert(lines, "[Instances]")
+        for _, info in ipairs(res.instances) do
+            count += 1
+            local matchStr = ""
+            for i, m in ipairs(info.matches) do
+                matchStr ..= (i > 1 and ", " or "") .. (m.field .. "='" .. m.match .. "'")
+            end
+            table.insert(lines, string.format(
+                "  [%d] %s (%s) %s",
+                count, info.path, info.class, matchStr
+            ))
+        end
+    end
+
+    if res.globals and #res.globals > 0 then
+        table.insert(lines, "")
+        table.insert(lines, "[Globals]")
+        for _, info in ipairs(res.globals) do
+            count += 1
+            table.insert(lines, string.format(
+                "  [%d] %s.%s type=%s match='%s'",
+                count, info.source, info.key, info.valueType, info.match
+            ))
+        end
+    end
+
+    if count == 0 then
+        table.insert(lines, "")
+        table.insert(lines, "No suspicious scripts found.")
+    else
+        table.insert(lines, "")
+        table.insert(lines, ("Total: %d potential script(s)."):format(count))
+    end
+
+    return table.concat(lines, "\n")
+end
+
+local function runScanAndLog()
+    -- чистим лог, но не удаляем layout
+    for _, child in ipairs(scrolling:GetChildren()) do
+        if child ~= logLayout then
+            child:Destroy()
+        end
+    end
+
+    appendLogLine(">> scanning for afk / rejoin / guardian scripts...", Color3.fromRGB(0, 255, 120))
+
+    local res = AisbergGuardian.scanForAisbergHelpers()
+    local count = 0
+
+    if res.instances and #res.instances > 0 then
+        appendLogLine(">> instances:", Color3.fromRGB(0, 200, 255))
+        for _, info in ipairs(res.instances) do
+            count += 1
+            local matchStr = ""
+            for i, m in ipairs(info.matches) do
+                matchStr ..= (i > 1 and ", " or "") .. (m.field .. "='" .. m.match .. "'")
+            end
+            appendLogLine(
+                string.format("  [%d] %s (%s)  %s",
+                    count, info.path, info.class, matchStr),
+                Color3.fromRGB(170, 255, 170)
+            )
+        end
+    end
+
+    if res.globals and #res.globals > 0 then
+        appendLogLine(">> globals:", Color3.fromRGB(0, 200, 255))
+        for _, info in ipairs(res.globals) do
+            count += 1
+            appendLogLine(
+                string.format("  [%d] %s.%s  match='%s' (%s)",
+                    count, info.source, info.key, info.match, info.valueType),
+                Color3.fromRGB(200, 220, 170)
+            )
+        end
+    end
+
+    if count == 0 then
+        appendLogLine(">> nothing suspicious found.", Color3.fromRGB(140, 200, 255))
+    else
+        appendLogLine(">> total: " .. tostring(count) .. " potential script(s).", Color3.fromRGB(255, 210, 80))
+    end
+
+    updateExternalLabel()
+end
+
+local function exportScan()
+    local txt = buildExportText()
+    local exportedClipboard, exportedFile = false, false
+
+    pcall(function()
+        if setclipboard then
+            setclipboard(txt)
+            exportedClipboard = true
+        elseif toclipboard then
+            toclipboard(txt)
+            exportedClipboard = true
+        end
+    end)
+
+    pcall(function()
+        if writefile then
+            local fname = "AisbergGuardian_Scan_" .. os.date("%Y-%m-%d_%H-%M-%S") .. ".txt"
+            writefile(fname, txt)
+            exportedFile = true
+        end
+    end)
+
+    if exportedClipboard or exportedFile then
+        appendLogLine(">> export completed:", Color3.fromRGB(0, 255, 120))
+        if exportedClipboard then
+            appendLogLine("   - copied to clipboard", Color3.fromRGB(170, 255, 170))
+        end
+        if exportedFile then
+            appendLogLine("   - saved to exploit workspace", Color3.fromRGB(170, 255, 170))
+        end
+    else
+        appendLogLine(">> export failed: no setclipboard/writefile in this executor", Color3.fromRGB(255, 120, 120))
+    end
+end
+
+--------------------------------------------------
+-- Buttons + scheduler
+--------------------------------------------------
+
+updateIgnoreButton()
+AisbergGuardian.enabled = true
+updateStatus()
+
+-- отложенный первый скан, чтобы не лагать на старте
+task.delay(1, function()
+    if screenGui.Parent then
+        runScanAndLog()
+    end
+end)
+
+if shouldEnableOurAntiAisberg() then
+    startIdledHook()
+else
+    AisbergGuardian.enabled = false
+end
+updateStatus()
+
+toggleButton.Activated:Connect(function()
+    AisbergGuardian.enabled = not AisbergGuardian.enabled
+    if AisbergGuardian.enabled then
+        if shouldEnableOurAntiAisberg() then
+            startIdledHook()
+        else
+            AisbergGuardian.enabled = false
+        end
+    else
+        stopIdledHook()
+    end
+    updateStatus()
+end)
+
+rescanButton.Activated:Connect(runScanAndLog)
+
+ignoreButton.Activated:Connect(function()
+    AisbergGuardian.ignoreIfOtherFound = not AisbergGuardian.ignoreIfOtherFound
+    updateIgnoreButton()
+end)
+
+exportButton.Activated:Connect(exportScan)
+
+task.spawn(function()
+    while task.wait(1) do
+        if not screenGui.Parent then break end
+        if not AisbergGuardian.enabled then
+            continue
+        end
+
+        local delay = nextWait()
+        local t = 0
+        while t < delay and AisbergGuardian.enabled and screenGui.Parent do
+            task.wait(1)
+            t += 1
+        end
+        if AisbergGuardian.enabled then
+            performAction()
+        end
+    end
+end)
+
+table.insert(AisbergGuardian.connections, Players.PlayerRemoving:Connect(function(plr)
+    if plr == LocalPlayer then
+        cleanup()
+    end
+end))
+
+warn("[Aisberg Guardian] Loaded (terminal UI, drag, collapse, resize, export).")
