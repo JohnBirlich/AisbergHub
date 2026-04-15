@@ -1,4 +1,7 @@
--- Inv Guardian – inventory checker + terminal GUI (drag + collapse)
+-- Inv Guardian – inventory checker + terminal GUI (single instance, close button)
+
+if getgenv and getgenv().InvGuardianLoaded then return end
+if getgenv then getgenv().InvGuardianLoaded = true end
 
 local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -6,8 +9,10 @@ local TweenService     = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 
-local CHECK_INTERVAL = 20 -- 5 минут
+local CHECK_INTERVAL = 15 -- 5 минут
 local checkerEnabled = true
+local running        = true
+local connections    = {}
 
 --------------------------------------------------
 -- Время + инвентарь
@@ -44,19 +49,24 @@ local function getInventoryNames()
 end
 
 local function waitForCharacter()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 10)
+    return char, hum
 end
 
 local function resetCharacter()
     local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.Health = 0
-            return
-        end
+    if not char then
+        LocalPlayer.CharacterAdded:Wait()
+        return
     end
-    LocalPlayer:LoadCharacter()
+
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health > 0 then
+        hum.Health = 0
+    else
+        -- гуманоид уже мёртв / отсутствует, просто ждём респавн в цикле
+    end
 end
 
 --------------------------------------------------
@@ -66,6 +76,7 @@ end
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "InvGuardianGui"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
@@ -122,6 +133,24 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 5)
 toggleCorner.Parent = toggleButton
 
+-- кнопка закрытия
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 18, 0, 18)
+closeButton.Position = UDim2.new(1, -20, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+closeButton.BorderSizePixel = 0
+closeButton.AutoButtonColor = true
+closeButton.Font = Enum.Font.Code
+closeButton.TextSize = 14
+closeButton.TextColor3 = Color3.fromRGB(220, 120, 120)
+closeButton.Text = "X"
+closeButton.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 4)
+closeCorner.Parent = closeButton
+
 -- нижняя строка статуса
 local statusFrame = Instance.new("Frame")
 statusFrame.Size = UDim2.new(1, -10, 0, 26)
@@ -161,7 +190,7 @@ statusText.Parent = statusFrame
 --------------------------------------------------
 
 do
-    local dragging = false
+    local dragging = true
     local dragInput, dragStart, startPos
 
     local function update(input)
@@ -172,7 +201,7 @@ do
         )
     end
 
-    header.InputBegan:Connect(function(input)
+    table.insert(connections, header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
@@ -185,42 +214,24 @@ do
                 end
             end)
         end
-    end)
+    end))
 
-    header.InputChanged:Connect(function(input)
+    table.insert(connections, header.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
-    end)
+    end))
 
-    UserInputService.InputChanged:Connect(function(input)
+    table.insert(connections, UserInputService.InputChanged:Connect(function(input)
         if dragging and input == dragInput then
             update(input)
         end
-    end)
+    end))
 end
 
 --------------------------------------------------
--- Collapse / expand
---------------------------------------------------
-
-local expandedSize  = UDim2.new(0, 260, 0, 70)
-local collapsedSize = UDim2.new(0, 260, 0, 30)
-local isCollapsed   = false
-
-local function setCollapsed(state)
-    isCollapsed = state
-    local info = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-    local targetSize = state and collapsedSize or expandedSize
-    TweenService:Create(mainFrame, info, { Size = targetSize }):Play()
-
-    statusFrame.Visible = not state
-end
-
---------------------------------------------------
--- Привязка визуала к флагу
+-- Визуал ON/OFF
 --------------------------------------------------
 
 local function updateToggleVisual()
@@ -239,21 +250,49 @@ local function updateToggleVisual()
     end
 end
 
-toggleButton.Activated:Connect(function()
+table.insert(connections, toggleButton.Activated:Connect(function()
     checkerEnabled = not checkerEnabled
     updateToggleVisual()
     print("[Inv Guardian] Checker is now " .. (checkerEnabled and "ENABLED" or "DISABLED") .. " at " .. getTimeString())
-end)
+end))
 
 updateToggleVisual()
 
 --------------------------------------------------
--- Основной цикл проверки
+-- Shutdown (кнопка закрытия)
 --------------------------------------------------
 
-local function startChecker()
-    while true do
-        waitForCharacter()
+local function shutdown()
+    if not running then return end
+    running = false
+    checkerEnabled = false
+
+    for _, conn in ipairs(connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    table.clear(connections)
+
+    pcall(function()
+        screenGui:Destroy()
+    end)
+
+    if getgenv then
+        getgenv().InvGuardianLoaded = nil
+    end
+
+    print("[Inv Guardian] Script unloaded at " .. getTimeString())
+end
+
+closeButton.Activated:Connect(shutdown)
+
+--------------------------------------------------
+-- Основной цикл
+--------------------------------------------------
+
+local function checkerLoop()
+    while running do
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        if not running then break end
 
         if not checkerEnabled then
             task.wait(1)
@@ -269,8 +308,10 @@ local function startChecker()
             task.wait(CHECK_INTERVAL)
         else
             print("[Inv Guardian] No items, resetting character | " .. timeStr)
+
             resetCharacter()
-            waitForCharacter()
+            local _newChar, _newHum = waitForCharacter()
+            if not running then break end
 
             local afterItems = getInventoryNames()
             local afterTime  = getTimeString()
@@ -288,4 +329,4 @@ local function startChecker()
 end
 
 waitForCharacter()
-task.spawn(startChecker)
+task.spawn(checkerLoop)
